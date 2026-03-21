@@ -1,17 +1,10 @@
-<!-- Lumo · Wordmark · text rendered as stroke paths (font-independent) -->
+<!-- Lumo  Wordmark  text rendered as stroke paths (font-independent) -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" width="220" height="72">
   <defs>
     <radialGradient id="moon-pill" cx="30%" cy="30%" r="80%">
       <stop offset="0%"   stop-color="#13172b"/>
       <stop offset="100%" stop-color="#080b18"/>
     </radialGradient>
-    <filter id="glow-wm" x="-20%" y="-80%" width="140%" height="360%">
-      <feGaussianBlur stdDeviation="1.6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
 
   <!-- Oval/pill background -->
@@ -20,8 +13,8 @@
         fill="none" stroke="#1e2540" stroke-width="1"/>
 
   <!--
-    "lumo" as stroke paths — no fonts needed.
-    x-height: y24–y44 (20 px)   ascender: y16
+    "lumo" as stroke paths  no fonts needed.
+    x-height: y24y44 (20 px)   ascender: y16
     Visually centered: left edge ?63, right edge ?157, center ?110
   -->
   <g stroke="#c9d8f0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
@@ -39,6 +32,6 @@
     <ellipse cx="147" cy="34" rx="10" ry="10"/>
   </g>
 
-  <!-- Cursor bar — glowing moon-blue -->
-  <rect x="80" y="55" width="60" height="6" rx="3" fill="#7eb8f7" filter="url(#glow-wm)"/>
+  <!-- Cursor bar -->
+  <rect x="80" y="55" width="60" height="6" rx="3" fill="#7eb8f7"/>
 </svg>
