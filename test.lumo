@@ -1,0 +1,19 @@
+intent "Initialize user profile for processing"
+let user_data be { "name": "Alice", "age": 30 }
+
+pipe process_user
+- start with user_data
+- map using [age]
+- filter when age greater than 18
+- yield result
+
+pipe generate_greeting
+- start with user_data
+- map using [name]
+- transform ??? "Format as a friendly greeting string"
+- yield result
+
+match user_status
+- when "active" yield true
+- when "banned" yield false
+- catch error yield ??? "Provide a fallback boolean"

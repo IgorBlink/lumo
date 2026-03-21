@@ -1,0 +1,14 @@
+intent "Classic FizzBuzz from 1 to 20"
+let i be 1
+repeat while i less than 21
+- let mod3 be i modulo 3
+- let mod5 be i modulo 5
+- let mod15 be i modulo 15
+- match mod15
+  - when 0 yield print "FizzBuzz"
+  - catch error yield match mod3
+    - when 0 yield print "Fizz"
+    - catch error yield match mod5
+      - when 0 yield print "Buzz"
+      - catch error yield print i
+- set i be i plus 1

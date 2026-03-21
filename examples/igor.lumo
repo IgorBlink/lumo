@@ -1,0 +1,5 @@
+intent "arithmetic"
+let a be 5
+let b be 10
+let c be a plus b
+print c

@@ -1,0 +1,11 @@
+intent "Basic arithmetic operations"
+let a be 5
+let b be 10
+let sum be a plus b
+print sum
+
+let product be a times b
+print product
+
+let complex be a plus b times 2
+print complex
