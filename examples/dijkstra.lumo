@@ -1,0 +1,78 @@
+intent "Dijkstra's Shortest Path Algorithm"
+intent "Find shortest distance from src to every vertex in a weighted directed graph"
+
+# ── Graph definition ──────────────────────────────────────────────────────────
+# n=5 vertices labelled 0..4, 7 directed edges, source = 0
+let n be 5
+let src be 0
+let inf be 999999
+let num_edges be 7
+let neg1 be 0 minus 1
+
+# Each directed edge is stored across three parallel lists:
+#   edge_from[i] -> edge_to[i]  with weight edge_wt[i]
+let edge_from be list 0, 0, 1, 2, 2, 2, 3
+let edge_to   be list 1, 2, 3, 1, 3, 4, 4
+let edge_wt   be list 10, 3, 2, 4, 8, 2, 5
+
+# ── Initialization ─────────────────────────────────────────────────────────────
+# dist[v]    = tentative shortest distance from src to v  (inf means unreachable)
+# visited[v] = true once v's shortest path is permanently decided
+let dist    be list inf, inf, inf, inf, inf
+let visited be list false, false, false, false, false
+put dist at src be 0
+
+# ── Main loop: n iterations, one vertex finalized per iteration ────────────────
+let outer be 0
+repeat while outer below n
+
+  # Step 1 – pick the unvisited vertex with the smallest tentative distance
+  let u be neg1
+  let u_dist be inf plus 1
+  let j be 0
+  repeat while j below n
+    let cur_dist be get dist at j
+    let cur_vis  be get visited at j
+    if not cur_vis then
+      if cur_dist below u_dist then
+        set u be j
+        set u_dist be cur_dist
+      end
+    end
+    set j be j plus 1
+  end
+
+  # Step 2 – relax every outgoing edge from u
+  if not (u equals neg1) then
+    put visited at u be true
+    let e be 0
+    repeat while e below num_edges
+      let ef be get edge_from at e
+      if ef equals u then
+        let et    be get edge_to  at e
+        let ew    be get edge_wt  at e
+        let new_d be u_dist plus ew
+        let old_d be get dist at et
+        if new_d below old_d then
+          put dist at et be new_d
+        end
+      end
+      set e be e plus 1
+    end
+  end
+
+  set outer be outer plus 1
+end
+
+# ── Print results ──────────────────────────────────────────────────────────────
+# Unreachable vertices (dist still equals inf) are reported as -1
+let i be 0
+repeat while i below n
+  let d be get dist at i
+  if d equals inf then
+    print i plus ": -1"
+  else
+    print i plus ": " plus d
+  end
+  set i be i plus 1
+end

@@ -7,6 +7,20 @@ Lumo uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.1.1] — 2026-03-21
+
+### Added
+
+- VS Code extension (`vscode-extension/`) with syntax highlighting, real-time linting, and file icons for `.lumo` files
+- Language logo: icon mark (`assets/logos/lumo-icon.svg`) and wordmark (`assets/logos/lumo-wordmark.svg`)
+- Dijkstra's shortest-path algorithm as a full example program (`examples/dijkstra.lumo`)
+
+### Changed
+
+- README rewritten with full language reference table, extension install instructions, and example index
+
+---
+
 ## [0.1.0] — 2026-03-21
 
 ### Added

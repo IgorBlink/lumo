@@ -1,0 +1,91 @@
+{
+  "name": "lumo-language",
+  "displayName": "Lumo Language",
+  "description": "Syntax highlighting and real-time linting for the Lumo programming language",
+  "version": "0.1.1",
+  "publisher": "lumo",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "keywords": [
+    "lumo",
+    "linting",
+    "syntax",
+    "llm",
+    "language"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IgorBlink/lumo.git"
+  },
+  "homepage": "https://github.com/IgorBlink/lumo",
+  "bugs": {
+    "url": "https://github.com/IgorBlink/lumo/issues"
+  },
+  "activationEvents": [
+    "onLanguage:lumo"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "lumo",
+        "aliases": [
+          "Lumo",
+          "lumo"
+        ],
+        "extensions": [
+          ".lumo"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/lumo-file-light.svg",
+          "dark": "./icons/lumo-file.svg"
+        }
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "lumo-file-icons",
+        "label": "Lumo File Icons",
+        "path": "./icons/lumo-theme.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lumo",
+        "scopeName": "source.lumo",
+        "path": "./syntaxes/lumo.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Lumo",
+      "properties": {
+        "lumo.executablePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the `lumo` binary. Leave empty to use the binary found in PATH, or to auto-detect when the workspace contains a `lumo` binary."
+        },
+        "lumo.validateOnType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Validate the document as you type (debounced). When false, validation runs only on save."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

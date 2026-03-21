@@ -1,0 +1,42 @@
+<!-- Lumo · Wordmark · Moon Oval + Full Name -->
+<!--
+  Same palette as the icon: dark moon oval, silver "lumo" in monospace
+  (monospace = code = programming language), glowing cursor bar below.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" width="220" height="72">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;display=swap');
+    </style>
+    <radialGradient id="moon-pill" cx="30%" cy="30%" r="80%">
+      <stop offset="0%"   stop-color="#13172b"/>
+      <stop offset="100%" stop-color="#080b18"/>
+    </radialGradient>
+    <filter id="glow-wm" x="-20%" y="-80%" width="140%" height="360%">
+      <feGaussianBlur stdDeviation="1.6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Oval/pill background  same moon dark -->
+  <rect x="2" y="2" width="216" height="68" rx="34" fill="url(#moon-pill)"/>
+  <rect x="2" y="2" width="216" height="68" rx="34"
+        fill="none" stroke="#1e2540" stroke-width="1"/>
+
+  <!-- "lumo"  monospace weight 500, moonlight silver, vertically centered with cursor -->
+  <text
+    x="110" y="32"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace"
+    font-size="40"
+    font-weight="500"
+    letter-spacing="3"
+    fill="#c9d8f0">lumo</text>
+
+  <!-- Cursor bar  glowing moon-blue, same width rhythm as the icon -->
+  <rect x="80" y="55" width="60" height="6" rx="3" fill="#7eb8f7" filter="url(#glow-wm)"/>
+</svg>

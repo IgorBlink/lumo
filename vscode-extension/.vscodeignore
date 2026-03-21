@@ -1,0 +1,15 @@
+# Source files — compiled to out/ at build time
+src/
+tsconfig.json
+
+# Dev dependencies
+node_modules/
+
+# Lock file not needed in extension
+package-lock.json
+
+# Already-built VSIX archives
+*.vsix
+
+# macOS
+.DS_Store

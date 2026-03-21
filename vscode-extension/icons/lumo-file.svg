@@ -1,0 +1,9 @@
+<!-- Lumo � File Icon � transparent background, visible on both light and dark themes -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Circle outline -->
+  <circle cx="12" cy="12" r="11" fill="none" stroke="#7eb8f7" stroke-width="1.5"/>
+  <!-- L vertical stroke -->
+  <rect x="7"  y="5.5" width="3"  height="11" rx="1" fill="#c9d8f0"/>
+  <!-- L horizontal stroke -->
+  <rect x="7"  y="13.5" width="10" height="3"  rx="1" fill="#c9d8f0"/>
+</svg>

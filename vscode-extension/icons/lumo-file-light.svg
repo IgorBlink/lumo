@@ -1,0 +1,11 @@
+<!-- Lumo · File Icon · Light Theme -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <circle cx="50" cy="50" r="47" fill="#e8edf7"/>
+  <circle cx="50" cy="50" r="47" fill="none" stroke="#c8d0e8" stroke-width="1"/>
+  <!-- L vertical -->
+  <rect x="28" y="22" width="12" height="46" rx="3.5" fill="#1e2a4a"/>
+  <!-- L horizontal -->
+  <rect x="28" y="56" width="44" height="12" rx="3.5" fill="#1e2a4a"/>
+  <!-- Cursor -->
+  <rect x="28" y="73" width="44" height="6" rx="3" fill="#3b7dd8"/>
+</svg>

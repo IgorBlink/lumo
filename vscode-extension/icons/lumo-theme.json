@@ -1,0 +1,22 @@
+{
+  "iconDefinitions": {
+    "_lumo": {
+      "iconPath": "./lumo-file.svg"
+    },
+    "_file": {
+      "iconPath": "./default-file.svg"
+    },
+    "_folder": {
+      "iconPath": "./default-folder.svg"
+    }
+  },
+  "file": "_file",
+  "folder": "_folder",
+  "folderExpanded": "_folder",
+  "fileExtensions": {
+    "lumo": "_lumo"
+  },
+  "languageIds": {
+    "lumo": "_lumo"
+  }
+}
