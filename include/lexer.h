@@ -5,12 +5,21 @@
 #include <iostream>
 
 enum class TokenType {
-    // Keywords
+    // ── Declaration statements ────────────────────────────────────────────────
     INTENT,
     LET,
     BE,
     SET,
     PRINT,
+    SKIP,
+    READ,         // Fix 6: read <name>
+
+    // ── Block constructs ──────────────────────────────────────────────────────
+    REPEAT,
+    WHILE,
+    FOR,          // Fix 2: for each … in …
+    EACH,         // Fix 2
+    IN,           // Fix 2
     PIPE,
     MATCH,
     WHEN,
@@ -22,51 +31,66 @@ enum class TokenType {
     MAP,
     FILTER,
     TRANSFORM,
-    USING,
-    REPEAT,
-    WHILE,
+    END,          // terminates repeat / pipe / match / if / define blocks
 
-    // Arithmetic / logic operators
+    // ── Conditional construct ─────────────────────────────────────────────────
+    IF,
+    THEN,
+    ELIF,
+    ELSE,
+
+    // ── Functions ─────────────────────────────────────────────────────────────
+    DEFINE,
+    TAKING,
+    RETURN_KW,
+    CALL_KW,
+    PASSING,
+
+    // ── Lists ─────────────────────────────────────────────────────────────────
+    LIST_KW,
+    AT,
+    PUT,
+    GET_KW,
+
+    // ── Arithmetic and logic operators (all single tokens) ────────────────────
     PLUS,
     MINUS,
     TIMES,
-    DIVIDED,
-    BY,
+    DIVBY,        // "divided by" → single token
     MODULO,
-    GREATER,
-    LESS,
-    THAN,
+    ABOVE,        // strictly greater than
+    BELOW,        // strictly less than
+    ATLEAST,      // Fix 1: greater or equal (>=)
+    ATMOST,       // Fix 1: less or equal (<=)
     EQUALS,
     AND,
     OR,
     NOT,
 
-    // Boolean literals
+    // ── Boolean literals ──────────────────────────────────────────────────────
     TRUE_LIT,
     FALSE_LIT,
 
-    // Special pipe identifiers
-    VALUE,
-    RESULT,
+    // ── Reserved pipe registers ───────────────────────────────────────────────
+    VALUE,        // active pipe element register (Fix 3: RESULT removed)
 
-    // Punctuation and special tokens
-    HOLE,      // ???
-    DASH,      // -
-    LBRACKET,  // [
-    RBRACKET,  // ]
-    LBRACE,    // {
-    RBRACE,    // }
-    LPAREN,    // (
-    RPAREN,    // )
-    COLON,     // :
-    COMMA,     // ,
+    // ── Punctuation ───────────────────────────────────────────────────────────
+    HOLE,         // ???
+    LBRACKET,     // [
+    RBRACKET,     // ]
+    LBRACE,       // {
+    RBRACE,       // }
+    LPAREN,       // (
+    RPAREN,       // )
+    COLON,        // :
+    COMMA,        // ,
 
-    // Literals
+    // ── Literals and identifiers ──────────────────────────────────────────────
     IDENTIFIER,
     STRING_LITERAL,
     NUMBER,
 
-    // Control
+    // ── Control ───────────────────────────────────────────────────────────────
     NEWLINE,
     END_OF_FILE,
     UNKNOWN

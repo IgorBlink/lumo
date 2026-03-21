@@ -9,6 +9,13 @@ std::string Token::toString() const {
         case TokenType::BE:           return "BE";
         case TokenType::SET:          return "SET";
         case TokenType::PRINT:        return "PRINT";
+        case TokenType::SKIP:         return "SKIP";
+        case TokenType::READ:         return "READ";
+        case TokenType::REPEAT:       return "REPEAT";
+        case TokenType::WHILE:        return "WHILE";
+        case TokenType::FOR:          return "FOR";
+        case TokenType::EACH:         return "EACH";
+        case TokenType::IN:           return "IN";
         case TokenType::PIPE:         return "PIPE";
         case TokenType::MATCH:        return "MATCH";
         case TokenType::WHEN:         return "WHEN";
@@ -20,18 +27,29 @@ std::string Token::toString() const {
         case TokenType::MAP:          return "MAP";
         case TokenType::FILTER:       return "FILTER";
         case TokenType::TRANSFORM:    return "TRANSFORM";
-        case TokenType::USING:        return "USING";
-        case TokenType::REPEAT:       return "REPEAT";
-        case TokenType::WHILE:        return "WHILE";
+        case TokenType::END:          return "END";
+        case TokenType::IF:           return "IF";
+        case TokenType::THEN:         return "THEN";
+        case TokenType::ELIF:         return "ELIF";
+        case TokenType::ELSE:         return "ELSE";
+        case TokenType::DEFINE:       return "DEFINE";
+        case TokenType::TAKING:       return "TAKING";
+        case TokenType::RETURN_KW:    return "RETURN";
+        case TokenType::CALL_KW:      return "CALL";
+        case TokenType::PASSING:      return "PASSING";
+        case TokenType::LIST_KW:      return "LIST";
+        case TokenType::AT:           return "AT";
+        case TokenType::PUT:          return "PUT";
+        case TokenType::GET_KW:       return "GET";
         case TokenType::PLUS:         return "PLUS";
         case TokenType::MINUS:        return "MINUS";
         case TokenType::TIMES:        return "TIMES";
-        case TokenType::DIVIDED:      return "DIVIDED";
-        case TokenType::BY:           return "BY";
+        case TokenType::DIVBY:        return "DIVBY";
         case TokenType::MODULO:       return "MODULO";
-        case TokenType::GREATER:      return "GREATER";
-        case TokenType::LESS:         return "LESS";
-        case TokenType::THAN:         return "THAN";
+        case TokenType::ABOVE:        return "ABOVE";
+        case TokenType::BELOW:        return "BELOW";
+        case TokenType::ATLEAST:      return "ATLEAST";
+        case TokenType::ATMOST:       return "ATMOST";
         case TokenType::EQUALS:       return "EQUALS";
         case TokenType::AND:          return "AND";
         case TokenType::OR:           return "OR";
@@ -39,9 +57,7 @@ std::string Token::toString() const {
         case TokenType::TRUE_LIT:     return "TRUE";
         case TokenType::FALSE_LIT:    return "FALSE";
         case TokenType::VALUE:        return "VALUE";
-        case TokenType::RESULT:       return "RESULT";
         case TokenType::HOLE:         return "HOLE";
-        case TokenType::DASH:         return "DASH";
         case TokenType::LBRACKET:     return "LBRACKET";
         case TokenType::RBRACKET:     return "RBRACKET";
         case TokenType::LBRACE:       return "LBRACE";
@@ -134,11 +150,20 @@ Token Lexer::lexIdentifierOrKeyword() {
     }
 
     static const std::unordered_map<std::string, TokenType> keywords = {
+        // Declaration statements
         {"intent",     TokenType::INTENT},
         {"let",        TokenType::LET},
         {"be",         TokenType::BE},
         {"set",        TokenType::SET},
         {"print",      TokenType::PRINT},
+        {"skip",       TokenType::SKIP},
+        {"read",       TokenType::READ},       // Fix 6
+        // Block constructs
+        {"repeat",     TokenType::REPEAT},
+        {"while",      TokenType::WHILE},
+        {"for",        TokenType::FOR},        // Fix 2
+        {"each",       TokenType::EACH},       // Fix 2
+        {"in",         TokenType::IN},         // Fix 2
         {"pipe",       TokenType::PIPE},
         {"match",      TokenType::MATCH},
         {"when",       TokenType::WHEN},
@@ -150,26 +175,42 @@ Token Lexer::lexIdentifierOrKeyword() {
         {"map",        TokenType::MAP},
         {"filter",     TokenType::FILTER},
         {"transform",  TokenType::TRANSFORM},
-        {"using",      TokenType::USING},
-        {"repeat",     TokenType::REPEAT},
-        {"while",      TokenType::WHILE},
+        {"end",        TokenType::END},
+        // Conditional
+        {"if",         TokenType::IF},
+        {"then",       TokenType::THEN},
+        {"elif",       TokenType::ELIF},
+        {"else",       TokenType::ELSE},
+        // Functions
+        {"define",     TokenType::DEFINE},
+        {"taking",     TokenType::TAKING},
+        {"return",     TokenType::RETURN_KW},
+        {"call",       TokenType::CALL_KW},
+        {"passing",    TokenType::PASSING},
+        // Lists
+        {"list",       TokenType::LIST_KW},
+        {"at",         TokenType::AT},
+        {"put",        TokenType::PUT},
+        {"get",        TokenType::GET_KW},
+        // Arithmetic / logic operators
         {"plus",       TokenType::PLUS},
         {"minus",      TokenType::MINUS},
         {"times",      TokenType::TIMES},
-        {"divided",    TokenType::DIVIDED},
-        {"by",         TokenType::BY},
+        {"divby",      TokenType::DIVBY},
         {"modulo",     TokenType::MODULO},
-        {"greater",    TokenType::GREATER},
-        {"less",       TokenType::LESS},
-        {"than",       TokenType::THAN},
+        {"above",      TokenType::ABOVE},
+        {"below",      TokenType::BELOW},
+        {"atleast",    TokenType::ATLEAST},    // Fix 1
+        {"atmost",     TokenType::ATMOST},     // Fix 1
         {"equals",     TokenType::EQUALS},
         {"and",        TokenType::AND},
         {"or",         TokenType::OR},
         {"not",        TokenType::NOT},
+        // Boolean literals
         {"true",       TokenType::TRUE_LIT},
         {"false",      TokenType::FALSE_LIT},
+        // Reserved pipe register (Fix 3: "result" removed — now a plain identifier)
         {"value",      TokenType::VALUE},
-        {"result",     TokenType::RESULT},
     };
 
     auto it = keywords.find(value);
@@ -207,7 +248,7 @@ Token Lexer::nextToken() {
     int startCol = column;
     int startLine = line;
 
-    // Handle ??? (three question marks) — avoid C trigraph issues by checking char by char
+    // Handle ??? (three question marks)
     if (c == '?') {
         advance();
         if (!isAtEnd() && peek() == '?') {
@@ -222,7 +263,6 @@ Token Lexer::nextToken() {
 
     advance();
     switch (c) {
-        case '-': return Token{TokenType::DASH,     "-", startLine, startCol};
         case '[': return Token{TokenType::LBRACKET, "[", startLine, startCol};
         case ']': return Token{TokenType::RBRACKET, "]", startLine, startCol};
         case '{': return Token{TokenType::LBRACE,   "{", startLine, startCol};

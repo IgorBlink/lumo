@@ -8,13 +8,16 @@
 #include "interpreter.h"
 
 int main(int argc, char* argv[]) {
-    bool printAst = false;
+    bool printAst  = false;
+    bool validate  = false;
     std::string filename;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg(argv[i]);
         if (arg == "--ast") {
             printAst = true;
+        } else if (arg == "--validate") {
+            validate = true;
         } else {
             filename = arg;
         }
@@ -32,26 +35,15 @@ int main(int argc, char* argv[]) {
         buffer << file.rdbuf();
         source = buffer.str();
     } else {
-        // Default demo program when no file is provided
-        source =
-            "intent \"Initialize user profile for processing\"\n"
-            "let user_data be { \"name\": \"Alice\", \"age\": 30 }\n"
-            "\n"
-            "pipe process_user\n"
-            "- start with user_data\n"
-            "- map using [age]\n"
-            "- filter when age greater than 18\n"
-            "- yield result\n"
-            "\n"
-            "pipe generate_greeting\n"
-            "- start with user_data\n"
-            "- map using [name]\n"
-            "- transform value\n"
-            "- yield result\n"
-            "\n"
-            "match user_status\n"
-            "- when \"active\" yield print \"User is active\"\n"
-            "- when \"banned\" yield print \"User is banned\"\n";
+        // Read from stdin when no file is provided
+        std::stringstream buffer;
+        buffer << std::cin.rdbuf();
+        source = buffer.str();
+        if (source.empty()) {
+            std::cerr << "Usage: lumo [--ast] [--validate] <file.lumo>" << std::endl;
+            std::cerr << "       lumo [--ast] [--validate]   (reads from stdin)" << std::endl;
+            return 1;
+        }
     }
 
     Lexer lexer(source);
@@ -63,6 +55,16 @@ int main(int argc, char* argv[]) {
     if (printAst) {
         ASTPrinter printer;
         program->accept(printer);
+        return 0;
+    }
+
+    // Change 8: --validate runs parse only and reports result without executing
+    if (validate) {
+        if (parser.hasErrors()) {
+            std::cerr << "INVALID" << std::endl;
+            return 1;
+        }
+        std::cout << "OK" << std::endl;
         return 0;
     }
 

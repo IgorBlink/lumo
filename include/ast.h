@@ -88,6 +88,33 @@ public:
     void accept(ASTVisitor& visitor) const override;
 };
 
+// list 1, 2, 3
+class ListExpr : public ExprNode {
+public:
+    std::vector<std::unique_ptr<ExprNode>> elements;
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// get <list-expr> at <index-expr>
+class GetExpr : public ExprNode {
+public:
+    std::unique_ptr<ExprNode> list;
+    std::unique_ptr<ExprNode> index;
+    GetExpr(std::unique_ptr<ExprNode> list, std::unique_ptr<ExprNode> index)
+        : list(std::move(list)), index(std::move(index)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// call <name> [passing arg1, arg2, ...]  — expression form
+class CallExpr : public ExprNode {
+public:
+    std::string name;
+    std::vector<std::unique_ptr<ExprNode>> args;
+    CallExpr(const std::string& name, std::vector<std::unique_ptr<ExprNode>> args)
+        : name(name), args(std::move(args)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
 // ─── Statements ──────────────────────────────────────────────────────────────
 
 class StmtNode : public ASTNode {};
@@ -124,10 +151,17 @@ public:
     void accept(ASTVisitor& visitor) const override;
 };
 
-class ExprStatement : public StmtNode {
+// skip — explicit no-op statement
+class SkipDecl : public StmtNode {
 public:
-    std::unique_ptr<ExprNode> expr;
-    ExprStatement(std::unique_ptr<ExprNode> expr) : expr(std::move(expr)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// read <name>  — Fix 6: reads one line from stdin into an existing variable
+class ReadDecl : public StmtNode {
+public:
+    std::string name;
+    ReadDecl(const std::string& name) : name(name) {}
     void accept(ASTVisitor& visitor) const override;
 };
 
@@ -140,13 +174,91 @@ public:
     void accept(ASTVisitor& visitor) const override;
 };
 
-// ─── Pipe ────────────────────────────────────────────────────────────────────
-
-class ContextNode {
+// Fix 2: repeat <count> times … end
+class RepeatTimesDecl : public StmtNode {
 public:
-    std::vector<std::string> variables;
-    ContextNode(const std::vector<std::string>& variables) : variables(variables) {}
+    std::unique_ptr<ExprNode> count;
+    std::vector<std::unique_ptr<StmtNode>> body;
+    RepeatTimesDecl(std::unique_ptr<ExprNode> count)
+        : count(std::move(count)) {}
+    void accept(ASTVisitor& visitor) const override;
 };
+
+// Fix 2: for each <name> in <list-expr> … end
+class ForEachDecl : public StmtNode {
+public:
+    std::string varName;
+    std::unique_ptr<ExprNode> listExpr;
+    std::vector<std::unique_ptr<StmtNode>> body;
+    ForEachDecl(const std::string& varName, std::unique_ptr<ExprNode> listExpr)
+        : varName(varName), listExpr(std::move(listExpr)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// if/elif/else/end — one IfClause per if/elif branch
+struct IfClause {
+    std::unique_ptr<ExprNode> condition;
+    std::vector<std::unique_ptr<StmtNode>> body;
+
+    IfClause(std::unique_ptr<ExprNode> cond, std::vector<std::unique_ptr<StmtNode>> b)
+        : condition(std::move(cond)), body(std::move(b)) {}
+
+    IfClause(IfClause&&) = default;
+    IfClause& operator=(IfClause&&) = default;
+    IfClause(const IfClause&) = delete;
+    IfClause& operator=(const IfClause&) = delete;
+};
+
+class IfDecl : public StmtNode {
+public:
+    std::vector<IfClause> clauses;               // if + zero or more elif branches
+    std::vector<std::unique_ptr<StmtNode>> else_body; // optional else branch
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// define <name> [taking p1, p2, ...]  ...body...  end
+class FunctionDecl : public StmtNode {
+public:
+    std::string name;
+    std::vector<std::string> params;
+    std::vector<std::unique_ptr<StmtNode>> body;
+    FunctionDecl(const std::string& name, std::vector<std::string> params)
+        : name(name), params(std::move(params)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// return <expr>
+class ReturnStmt : public StmtNode {
+public:
+    std::unique_ptr<ExprNode> expr;
+    ReturnStmt(std::unique_ptr<ExprNode> expr) : expr(std::move(expr)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// call <name> [passing arg1, arg2, ...]  — statement form (return value discarded)
+class CallStmt : public StmtNode {
+public:
+    std::string name;
+    std::vector<std::unique_ptr<ExprNode>> args;
+    CallStmt(const std::string& name, std::vector<std::unique_ptr<ExprNode>> args)
+        : name(name), args(std::move(args)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// put <name> at <index-expr> be <value-expr>
+class PutDecl : public StmtNode {
+public:
+    std::string name;
+    std::unique_ptr<ExprNode> index;
+    std::unique_ptr<ExprNode> value;
+    PutDecl(const std::string& name,
+            std::unique_ptr<ExprNode> index,
+            std::unique_ptr<ExprNode> value)
+        : name(name), index(std::move(index)), value(std::move(value)) {}
+    void accept(ASTVisitor& visitor) const override;
+};
+
+// ─── Pipe ────────────────────────────────────────────────────────────────────
 
 enum class StepOpType {
     START_WITH,
@@ -160,9 +272,8 @@ class StepNode : public ASTNode {
 public:
     StepOpType op;
     std::unique_ptr<ExprNode> expr;
-    std::unique_ptr<ContextNode> context;
-    StepNode(StepOpType op, std::unique_ptr<ExprNode> expr, std::unique_ptr<ContextNode> context)
-        : op(op), expr(std::move(expr)), context(std::move(context)) {}
+    StepNode(StepOpType op, std::unique_ptr<ExprNode> expr)
+        : op(op), expr(std::move(expr)) {}
     void accept(ASTVisitor& visitor) const override;
 };
 
@@ -179,7 +290,7 @@ public:
 class MatchCaseNode : public ASTNode {
 public:
     bool is_catch_error;
-    std::unique_ptr<ExprNode> condition;
+    std::unique_ptr<ExprNode> condition;   // null when is_catch_error == true
     std::unique_ptr<StmtNode> yield_stmt;
     MatchCaseNode(bool is_catch_error,
                   std::unique_ptr<ExprNode> condition,
@@ -212,6 +323,7 @@ class ASTVisitor {
 public:
     virtual ~ASTVisitor() = default;
 
+    // Expressions
     virtual void visit(const IdentifierExpr& node) = 0;
     virtual void visit(const StringLiteralExpr& node) = 0;
     virtual void visit(const NumberExpr& node) = 0;
@@ -220,19 +332,34 @@ public:
     virtual void visit(const BinaryExpr& node) = 0;
     virtual void visit(const UnaryExpr& node) = 0;
     virtual void visit(const JsonObjectExpr& node) = 0;
+    virtual void visit(const ListExpr& node) = 0;
+    virtual void visit(const GetExpr& node) = 0;
+    virtual void visit(const CallExpr& node) = 0;
 
+    // Statements
     virtual void visit(const IntentDecl& node) = 0;
     virtual void visit(const LetDecl& node) = 0;
     virtual void visit(const SetDecl& node) = 0;
     virtual void visit(const PrintDecl& node) = 0;
-    virtual void visit(const ExprStatement& node) = 0;
+    virtual void visit(const SkipDecl& node) = 0;
+    virtual void visit(const ReadDecl& node) = 0;
     virtual void visit(const RepeatDecl& node) = 0;
+    virtual void visit(const RepeatTimesDecl& node) = 0;
+    virtual void visit(const ForEachDecl& node) = 0;
+    virtual void visit(const IfDecl& node) = 0;
+    virtual void visit(const FunctionDecl& node) = 0;
+    virtual void visit(const ReturnStmt& node) = 0;
+    virtual void visit(const CallStmt& node) = 0;
+    virtual void visit(const PutDecl& node) = 0;
 
+    // Pipe
     virtual void visit(const StepNode& node) = 0;
     virtual void visit(const PipeDecl& node) = 0;
 
+    // Match
     virtual void visit(const MatchCaseNode& node) = 0;
     virtual void visit(const MatchDecl& node) = 0;
 
+    // Program
     virtual void visit(const ProgramNode& node) = 0;
 };

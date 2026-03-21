@@ -7,5 +7,8 @@ print sum
 let product be a times b
 print product
 
+let quotient be b divby a
+print quotient
+
 let complex be a plus b times 2
 print complex

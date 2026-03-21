@@ -1,0 +1,32 @@
+intent "Demonstrate functions and list data structures"
+
+define double taking n
+  return n times 2
+end
+
+define greet taking name
+  print "Hello, " plus name
+end
+
+let nums be list 1, 2, 3, 4, 5
+print nums
+
+pipe doubled_evens
+  start with nums
+  filter when value modulo 2 equals 0
+  map value times 2
+  yield output
+end
+
+print output
+
+let first be get nums at 0
+print first
+
+put nums at 0 be 99
+print get nums at 0
+
+let x be call double passing 21
+print x
+
+call greet passing "Lumo"

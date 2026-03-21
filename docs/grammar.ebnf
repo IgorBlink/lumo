@@ -1,0 +1,183 @@
+(* Lumo v2 — Normative Machine-Checkable Grammar
+   Rule: this file is the canonical authority for valid syntax.
+   All generated Lumo code must parse against this grammar without alteration.
+*)
+
+(* ─── Top-level ────────────────────────────────────────────────────────────── *)
+
+Program   ::= ( Statement | NEWLINE )* EOF
+
+(* ─── Statements ────────────────────────────────────────────────────────────── *)
+
+Statement ::= IntentDecl
+            | LetDecl
+            | SetDecl
+            | PrintDecl
+            | SkipDecl
+            | ReadDecl
+            | RepeatDecl
+            | RepeatTimesDecl
+            | ForEachDecl
+            | IfDecl
+            | FunctionDecl
+            | ReturnStmt
+            | CallStmt
+            | PutDecl
+            | PipeDecl
+            | MatchDecl
+
+(* intent "string" *)
+IntentDecl  ::= "intent" STRING_LITERAL
+
+(* let <name> be <expr>  — declares a new variable *)
+LetDecl     ::= "let" IDENTIFIER "be" Expression
+
+(* set <name> be <expr>  — mutates an existing variable *)
+SetDecl     ::= "set" IDENTIFIER "be" Expression
+
+(* print <expr> *)
+PrintDecl   ::= "print" Expression
+
+(* skip  — explicit no-op; use instead of bare expression *)
+SkipDecl    ::= "skip"
+
+(* read <name>  — reads one line from stdin into an existing variable (Fix 6) *)
+ReadDecl    ::= "read" IDENTIFIER
+
+(* return <expr>  — only valid inside define body *)
+ReturnStmt  ::= "return" Expression
+
+(* call <name> [passing arg1, arg2, ...]  — statement form *)
+CallStmt    ::= "call" IDENTIFIER [ "passing" Expression ( "," Expression )* ]
+
+(* put <name> at <index> be <value>  — mutate a list element or JSON field in place *)
+PutDecl     ::= "put" IDENTIFIER "at" Expression "be" Expression
+
+(* ─── repeat … end ──────────────────────────────────────────────────────────── *)
+
+(* while-controlled loop *)
+RepeatDecl      ::= "repeat" "while" Expression NEWLINE
+                        Statement*
+                    "end"
+
+(* Fix 2: count-controlled loop — count must be a non-negative integer at runtime *)
+(* Complex count expressions must be wrapped in parentheses. *)
+RepeatTimesDecl ::= "repeat" Primary "times" NEWLINE
+                        Statement*
+                    "end"
+
+(* Fix 2: for each loop — iterates over a list, binds element to <name> each iteration *)
+(* <name> must not shadow an existing variable in the outer scope (parse error). *)
+ForEachDecl     ::= "for" "each" IDENTIFIER "in" Expression NEWLINE
+                        Statement*
+                    "end"
+
+(* ─── if / elif / else … end ────────────────────────────────────────────────── *)
+
+IfDecl      ::= "if" Expression "then" NEWLINE
+                    Statement*
+                ( "elif" Expression "then" NEWLINE Statement* )*
+                [ "else" NEWLINE? Statement* ]
+                "end"
+
+(* ─── define … end ──────────────────────────────────────────────────────────── *)
+
+FunctionDecl ::= "define" IDENTIFIER
+                     [ "taking" IDENTIFIER ( "," IDENTIFIER )* ]
+                     NEWLINE
+                     Statement*
+                 "end"
+
+(* ─── pipe … end ────────────────────────────────────────────────────────────── *)
+
+PipeDecl    ::= "pipe" IDENTIFIER NEWLINE
+                    PipeStep+
+                "end"
+
+PipeStep    ::= StartStep
+              | MapStep
+              | FilterStep
+              | TransformStep
+              | YieldStep
+
+StartStep     ::= "start" "with" Expression
+MapStep       ::= "map" Expression            (* expression references `value` *)
+FilterStep    ::= "filter" "when" Expression  (* expression references `value` *)
+TransformStep ::= "transform" Expression      (* expression references `value` *)
+
+(* Fix 3: yield stores pipeline output into the named variable; pipe block name is cosmetic *)
+YieldStep     ::= "yield" IDENTIFIER
+
+(* ─── match … end ────────────────────────────────────────────────────────────── *)
+
+(* catch error is MANDATORY — match blocks must be exhaustive *)
+MatchDecl   ::= "match" Expression NEWLINE
+                    WhenCase*
+                    CatchCase
+                "end"
+
+WhenCase    ::= "when" Expression "yield" Statement
+CatchCase   ::= "catch" "error" "yield" Statement
+
+(* ─── Expressions (precedence, low → high) ──────────────────────────────────── *)
+
+Expression  ::= OrExpr
+
+OrExpr      ::= AndExpr ( "or"  AndExpr )*
+AndExpr     ::= NotExpr ( "and" NotExpr )*
+NotExpr     ::= "not" NotExpr | CompExpr
+
+(* Fix 1: atleast (>=) and atmost (<=) added at same precedence as equals/above/below *)
+CompExpr    ::= AddExpr [ ( "equals" | "above" | "below" | "atleast" | "atmost" ) AddExpr ]
+
+AddExpr     ::= MulExpr ( ( "plus" | "minus" ) MulExpr )*
+MulExpr     ::= Primary ( ( "times" | "divby" | "modulo" ) Primary )*
+
+Primary     ::= NUMBER
+              | STRING_LITERAL
+              | "true"
+              | "false"
+              | "value"                          (* active pipe element — read-only, only valid inside pipe steps *)
+              | IDENTIFIER
+              | "(" Expression ")"
+              | "???" STRING_LITERAL             (* unresolved hole *)
+              | JsonObject
+              | ListExpr
+              | GetExpr
+              | CallExpr
+
+ListExpr    ::= "list" [ Expression ( "," Expression )* ]
+GetExpr     ::= "get" Expression "at" Expression
+CallExpr    ::= "call" IDENTIFIER [ "passing" Expression ( "," Expression )* ]
+JsonObject  ::= "{" JsonField ( "," JsonField )* "}"
+JsonField   ::= STRING_LITERAL ":" Expression
+
+(* ─── Lexical tokens ─────────────────────────────────────────────────────────── *)
+
+IDENTIFIER      ::= [a-zA-Z_] [a-zA-Z0-9_]*
+                    (* must not be a reserved word — see Reserved Words below *)
+
+STRING_LITERAL  ::= '"' [^"]* '"'
+NUMBER          ::= [0-9]+ ( '.' [0-9]+ )?
+NEWLINE         ::= '\n'
+
+(* ─── Reserved Words (globally forbidden as IDENTIFIER) ─────────────────────── *)
+
+(* The following words are unconditionally reserved and may NEVER
+   appear as user-defined variable names, function names, or parameter names. *)
+
+ReservedWord ::= "intent"   | "let"     | "be"      | "set"     | "print"
+               | "skip"     | "read"
+               | "repeat"   | "while"   | "for"     | "each"    | "in"
+               | "pipe"     | "match"
+               | "when"     | "catch"   | "error"   | "yield"   | "start"
+               | "with"     | "map"     | "filter"  | "transform" | "end"
+               | "if"       | "then"    | "elif"    | "else"
+               | "define"   | "taking"  | "return"  | "call"    | "passing"
+               | "list"     | "at"      | "put"     | "get"
+               | "plus"     | "minus"   | "times"   | "divby"   | "modulo"
+               | "above"    | "below"   | "atleast" | "atmost"
+               | "equals"   | "and"     | "or"      | "not"
+               | "true"     | "false"
+               | "value"
+(* Fix 3: "result" is no longer reserved — it may be used as a plain variable name *)
