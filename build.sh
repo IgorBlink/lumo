@@ -5,8 +5,9 @@ set -euo pipefail
 # Lumo — build script
 # Usage:
 #   ./build.sh            build interpreter (default)
+#   ./build.sh install    build + install to /usr/local/bin so `lumo` works globally
 #   ./build.sh ext        build VS Code extension (.vsix)
-#   ./build.sh all        build everything
+#   ./build.sh all        build everything + install
 #   ./build.sh clean      remove all build artifacts
 # ─────────────────────────────────────────────
 
@@ -58,6 +59,13 @@ build_extension() {
   echo "  Install: Cmd+Shift+P → Install from VSIX → vscode-extension/lumo-language.vsix"
 }
 
+install_binary() {
+  build_interpreter
+  step "Installing lumo to /usr/local/bin"
+  sudo cp "$ROOT/lumo" /usr/local/bin/lumo
+  ok "Installed — run \`lumo\` from anywhere"
+}
+
 clean() {
   step "Cleaning build artifacts"
   rm -rf "$BUILD_DIR"
@@ -69,11 +77,12 @@ clean() {
 
 case "${1:-interpreter}" in
   interpreter) build_interpreter ;;
+  install)     install_binary ;;
   ext)         build_extension ;;
-  all)         build_interpreter; build_extension ;;
+  all)         install_binary; build_extension ;;
   clean)       clean ;;
   *)
-    echo "Usage: ./build.sh [interpreter|ext|all|clean]"
+    echo "Usage: ./build.sh [interpreter|install|ext|all|clean]"
     exit 1
     ;;
 esac
