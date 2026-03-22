@@ -7,6 +7,39 @@ Lumo uses [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.2.0] — 2026-03-21
+
+### Added
+
+**Standard library — built-in functions (called via `call name passing ...`)**
+
+- **String**: `length`, `charat`, `substr`, `split`, `join`, `contains`, `replace`, `trim`, `uppercase`, `lowercase`, `charcode`, `fromcode`, `indexof`, `startswith`, `endswith`
+- **List**: `push` (mutates in place), `pop`, `concat`, `slice`, `reverse`, `range`
+- **Type**: `typeof` → `"number"|"string"|"boolean"|"list"|"object"`, `tostring`, `tonumber`, `tobool`
+- **Math**: `floor`, `ceil`, `round`, `abs`, `sqrt`, `power`, `min`, `max`
+- **Object**: `keys`, `values`, `haskey`, `entries`
+- **I/O**: `readfile` — reads entire file as a string
+
+**String indexing via `get`**: `get "hello" at 2` → `"l"` (in addition to list and object access)
+
+These additions make Lumo self-hosting–capable: a full Lumo tokenizer, parser, and interpreter can now be written in Lumo itself.
+
+---
+
+## [0.1.1] — 2026-03-21
+
+### Added
+
+- VS Code extension (`vscode-extension/`) with syntax highlighting, real-time linting, and file icons for `.lumo` files
+- Language logo: icon mark (`assets/logos/lumo-icon.svg`) and wordmark (`assets/logos/lumo-wordmark.svg`)
+- Dijkstra's shortest-path algorithm as a full example program (`examples/dijkstra.lumo`)
+
+### Changed
+
+- README rewritten with full language reference table, extension install instructions, and example index
+
+---
+
 ## [0.1.0] — 2026-03-21
 
 ### Added

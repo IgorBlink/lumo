@@ -1,0 +1,120 @@
+intent "Standard library showcase — built-in functions"
+
+# ─── String ───────────────────────────────────────────────────────────────────
+
+let s be "Hello, Lumo!"
+print call length passing s
+print call charat passing s, 7
+print call substr passing s, 7, 4
+print call uppercase passing "lumo"
+print call lowercase passing "LUMO"
+print call trim passing "  padded  "
+print call replace passing s, "Lumo", "World"
+print call contains passing s, "Lumo"
+print call indexof passing s, "Lumo"
+print call startswith passing s, "Hello"
+print call endswith passing s, "!"
+print call charcode passing "A"
+print call fromcode passing 65
+
+let parts be call split passing "one,two,three", ","
+print parts
+print call join passing parts, " | "
+
+let word be "lumo"
+print get word at 0
+print get word at 3
+
+# ─── List ─────────────────────────────────────────────────────────────────────
+
+let nums be list 10, 20, 30
+call push passing nums, 40
+call push passing nums, 50
+print nums
+print call pop passing nums
+print nums
+print call reverse passing nums
+print call slice passing nums, 1, 3
+print call range passing 6
+
+let la be list 1, 2
+let lb be list 3, 4
+print call concat passing la, lb
+
+# ─── Type ─────────────────────────────────────────────────────────────────────
+
+print call typeof passing 42
+print call typeof passing "hi"
+print call typeof passing true
+print call typeof passing nums
+let obj be { "x": 10 }
+print call typeof passing obj
+print call tostring passing 99
+print call tonumber passing "3.14"
+print call tobool passing 0
+print call tobool passing "hello"
+
+# ─── Math ─────────────────────────────────────────────────────────────────────
+
+print call floor passing 3.9
+print call ceil passing 3.1
+print call round passing 2.5
+let neg be 0 minus 5
+print call abs passing neg
+print call sqrt passing 25
+print call power passing 2, 8
+print call min passing 4, 1, 7
+print call max passing 4, 1, 7
+
+# ─── Object ───────────────────────────────────────────────────────────────────
+
+let person be { "name": "Igor", "age": 30 }
+print call keys passing person
+print call values passing person
+print call haskey passing person, "name"
+print call haskey passing person, "email"
+print call entries passing person
+
+# ─── Mini tokenizer ───────────────────────────────────────────────────────────
+intent "Split source into tokens and classify each one"
+
+define is_digit taking ch
+  return call contains passing "0123456789", ch
+end
+
+define is_alpha taking ch
+  let code be call charcode passing ch
+  return code atleast 65 and code atmost 122
+end
+
+define classify taking tok
+  let first be call charat passing tok, 0
+  if call is_digit passing first then
+    return "NUMBER"
+  elif call is_alpha passing first then
+    return "WORD"
+  else
+    return "SYMBOL"
+  end
+end
+
+define tokenize taking src
+  let raw be call split passing src, " "
+  let tokens be list
+  for each tok in raw
+    let t be call trim passing tok
+    if not t equals "" then
+      call push passing tokens, t
+    end
+  end
+  return tokens
+end
+
+let source be "let x be 42 plus 8"
+let toks be call tokenize passing source
+print toks
+print call length passing toks
+
+for each tok in toks
+  print tok plus "  ->  " plus call classify passing tok
+end

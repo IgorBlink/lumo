@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get install -y cmake
+
+      - name: Configure
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run examples
+        run: |
+          ./build/lumo examples/hello.lumo
+          ./build/lumo examples/arithmetic.lumo
+          ./build/lumo examples/fizzbuzz.lumo
+          ./build/lumo examples/loop.lumo
+          ./build/lumo examples/functions.lumo
+
+      - name: Validate examples parse cleanly
+        run: |
+          ./build/lumo --validate examples/hello.lumo
+          ./build/lumo --validate examples/arithmetic.lumo
+          ./build/lumo --validate examples/fizzbuzz.lumo
+          ./build/lumo --validate examples/loop.lumo
+          ./build/lumo --validate examples/functions.lumo
+          ./build/lumo --validate examples/dijkstra.lumo
+
+  extension:
+    name: VS Code Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm install
+        working-directory: vscode-extension
+
+      - name: Compile TypeScript
+        run: npm run compile
+        working-directory: vscode-extension
+
+      - name: Package VSIX
+        run: npx @vscode/vsce package --no-dependencies --allow-missing-repository
+        working-directory: vscode-extension

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Lumo",
+  "scopeName": "source.lumo",
+  "fileTypes": ["lumo"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#hole" },
+    { "include": "#constant" },
+    { "include": "#number" },
+    { "include": "#keyword-control" },
+    { "include": "#keyword-operator" },
+    { "include": "#keyword-declaration" },
+    { "include": "#keyword-io" },
+    { "include": "#keyword-list" },
+    { "include": "#keyword-pipe" },
+    { "include": "#function-call" },
+    { "include": "#identifier" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.lumo",
+      "match": "#.*$"
+    },
+
+    "string": {
+      "name": "string.quoted.double.lumo",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.lumo",
+          "match": "\\\\."
+        }
+      ]
+    },
+
+    "hole": {
+      "name": "invalid.illegal.hole.lumo",
+      "match": "\\?\\?\\?(?:\\s+\"[^\"]*\")?"
+    },
+
+    "constant": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.lumo",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "variable.language.value.lumo",
+          "match": "\\bvalue\\b"
+        }
+      ]
+    },
+
+    "number": {
+      "name": "constant.numeric.lumo",
+      "match": "\\b[0-9]+(?:\\.[0-9]+)?\\b"
+    },
+
+    "keyword-control": {
+      "name": "keyword.control.lumo",
+      "match": "\\b(if|then|elif|else|end|repeat|while|times|for|each|in|match|when|catch|error|yield|return)\\b"
+    },
+
+    "keyword-operator": {
+      "name": "keyword.operator.lumo",
+      "match": "\\b(plus|minus|times|divby|modulo|above|below|atleast|atmost|equals|and|or|not)\\b"
+    },
+
+    "keyword-declaration": {
+      "name": "keyword.other.declaration.lumo",
+      "match": "\\b(let|set|be|define|taking)\\b"
+    },
+
+    "keyword-io": {
+      "name": "keyword.other.io.lumo",
+      "match": "\\b(print|read|intent|skip)\\b"
+    },
+
+    "keyword-list": {
+      "name": "keyword.other.list.lumo",
+      "match": "\\b(list|at|put|get)\\b"
+    },
+
+    "keyword-pipe": {
+      "name": "keyword.other.pipe.lumo",
+      "match": "\\b(pipe|start|with|map|filter|transform)\\b"
+    },
+
+    "function-call": {
+      "patterns": [
+        {
+          "name": "keyword.other.call.lumo",
+          "match": "\\b(call|passing)\\b"
+        },
+        {
+          "comment": "Highlight function name right after `call` or `define`",
+          "match": "\\b(call|define)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.other.call.lumo" },
+            "2": { "name": "entity.name.function.lumo" }
+          }
+        }
+      ]
+    },
+
+    "identifier": {
+      "name": "variable.other.lumo",
+      "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b"
+    }
+  }
+}

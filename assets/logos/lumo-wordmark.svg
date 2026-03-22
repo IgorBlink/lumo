@@ -1,0 +1,37 @@
+<!-- Lumo  Wordmark  text rendered as stroke paths (font-independent) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" width="220" height="72">
+  <defs>
+    <radialGradient id="moon-pill" cx="30%" cy="30%" r="80%">
+      <stop offset="0%"   stop-color="#13172b"/>
+      <stop offset="100%" stop-color="#080b18"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Oval/pill background -->
+  <rect x="2" y="2" width="216" height="68" rx="34" fill="url(#moon-pill)"/>
+  <rect x="2" y="2" width="216" height="68" rx="34"
+        fill="none" stroke="#1e2540" stroke-width="1"/>
+
+  <!--
+    "lumo" as stroke paths  no fonts needed.
+    x-height: y24y44 (20 px)   ascender: y16
+    Visually centered: left edge ?63, right edge ?157, center ?110
+  -->
+  <g stroke="#c9d8f0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- l  (ascender vertical) -->
+    <line x1="65" y1="16" x2="65" y2="44"/>
+
+    <!-- u  (open bowl) -->
+    <path d="M 80,24 L 80,40 Q 80,46 90,46 Q 100,46 100,40 L 100,24"/>
+
+    <!-- m  (left leg + two arches) -->
+    <path d="M 111,44 L 111,24 Q 111,22 116,22 Q 121,22 121,24 L 121,44"/>
+    <path d="M 121,24 Q 121,22 126,22 Q 131,22 131,24 L 131,44"/>
+
+    <!-- o  (circle) -->
+    <ellipse cx="147" cy="34" rx="10" ry="10"/>
+  </g>
+
+  <!-- Cursor bar -->
+  <rect x="80" y="55" width="60" height="6" rx="3" fill="#7eb8f7"/>
+</svg>

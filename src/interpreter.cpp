@@ -1,8 +1,11 @@
 #include "interpreter.h"
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <cmath>
 #include <stdexcept>
+#include <algorithm>
+#include <unordered_set>
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -101,6 +104,14 @@ void Interpreter::execStmt(const StmtNode& stmt) {
 // After the call, the caller's env is fully restored, so no mutations leak out.
 LumoValue Interpreter::callFunction(const std::string& name,
                                      const std::vector<std::unique_ptr<ExprNode>>& argExprs) {
+    // Try built-ins first — args evaluated in caller's env so shared_ptr mutations are visible
+    if (isBuiltin(name)) {
+        std::vector<LumoValue> argValsBuiltin;
+        argValsBuiltin.reserve(argExprs.size());
+        for (const auto& arg : argExprs) argValsBuiltin.push_back(eval(*arg));
+        return callBuiltin(name, argValsBuiltin);
+    }
+
     auto it = functions.find(name);
     if (it == functions.end()) {
         throw std::runtime_error("Undefined function: " + name);
@@ -360,7 +371,18 @@ void Interpreter::visit(const GetExpr& node) {
         return;
     }
 
-    throw std::runtime_error("'get' requires a list or JSON object");
+    if (std::holds_alternative<std::string>(containerVal)) {
+        if (!std::holds_alternative<double>(keyVal))
+            throw std::runtime_error("String index must be a number");
+        size_t idx = static_cast<size_t>(std::get<double>(keyVal));
+        const std::string& s = std::get<std::string>(containerVal);
+        if (idx >= s.size())
+            throw std::runtime_error("String index out of bounds: " + std::to_string(idx));
+        lastValue = std::string(1, s[idx]);
+        return;
+    }
+
+    throw std::runtime_error("'get' requires a list, string, or JSON object");
 }
 
 void Interpreter::visit(const CallExpr& node) {
@@ -612,4 +634,471 @@ void Interpreter::visit(const ProgramNode& node) {
     for (const auto& stmt : node.statements) {
         execStmt(*stmt);
     }
+}
+
+// ─── Built-in standard library ───────────────────────────────────────────────
+
+static const std::unordered_set<std::string> BUILTINS = {
+    // String operations
+    "length", "charat", "substr", "split", "join",
+    "contains", "replace", "trim", "uppercase", "lowercase",
+    "charcode", "fromcode", "indexof", "startswith", "endswith",
+    // List operations
+    "push", "pop", "concat", "slice", "reverse", "range",
+    // Type operations
+    "typeof", "tostring", "tonumber", "tobool",
+    // Math
+    "floor", "ceil", "abs", "sqrt", "power", "min", "max", "round",
+    // Object operations
+    "keys", "values", "haskey", "entries",
+    // I/O
+    "readfile",
+};
+
+bool Interpreter::isBuiltin(const std::string& name) const {
+    return BUILTINS.count(name) > 0;
+}
+
+static double requireDouble(const LumoValue& v, const std::string& fn, const std::string& arg) {
+    if (std::holds_alternative<double>(v)) return std::get<double>(v);
+    throw std::runtime_error("Built-in '" + fn + "': " + arg + " must be a number, got: " +
+                             lumoValueToString(v));
+}
+
+static const std::string& requireString(const LumoValue& v, const std::string& fn,
+                                        const std::string& arg) {
+    if (std::holds_alternative<std::string>(v)) return std::get<std::string>(v);
+    throw std::runtime_error("Built-in '" + fn + "': " + arg + " must be a string, got: " +
+                             lumoValueToString(v));
+}
+
+static std::shared_ptr<LumoList> requireList(const LumoValue& v, const std::string& fn,
+                                              const std::string& arg) {
+    if (std::holds_alternative<std::shared_ptr<LumoList>>(v))
+        return std::get<std::shared_ptr<LumoList>>(v);
+    throw std::runtime_error("Built-in '" + fn + "': " + arg + " must be a list, got: " +
+                             lumoValueToString(v));
+}
+
+LumoValue Interpreter::callBuiltin(const std::string& name, std::vector<LumoValue>& args) {
+    auto requireArity = [&](size_t n) {
+        if (args.size() != n)
+            throw std::runtime_error("Built-in '" + name + "' expects " + std::to_string(n) +
+                                     " argument(s), got " + std::to_string(args.size()));
+    };
+    auto requireArityMin = [&](size_t n) {
+        if (args.size() < n)
+            throw std::runtime_error("Built-in '" + name + "' expects at least " +
+                                     std::to_string(n) + " argument(s), got " +
+                                     std::to_string(args.size()));
+    };
+
+    // ── String operations ────────────────────────────────────────────────────
+
+    if (name == "length") {
+        requireArity(1);
+        if (std::holds_alternative<std::string>(args[0]))
+            return static_cast<double>(std::get<std::string>(args[0]).size());
+        if (std::holds_alternative<std::shared_ptr<LumoList>>(args[0]))
+            return static_cast<double>(
+                std::get<std::shared_ptr<LumoList>>(args[0])->elements.size());
+        if (std::holds_alternative<std::shared_ptr<LumoObject>>(args[0]))
+            return static_cast<double>(
+                std::get<std::shared_ptr<LumoObject>>(args[0])->fields.size());
+        throw std::runtime_error("Built-in 'length': argument must be a string, list, or object");
+    }
+
+    if (name == "charat") {
+        requireArity(2);
+        const std::string& s = requireString(args[0], name, "first argument");
+        size_t idx = static_cast<size_t>(requireDouble(args[1], name, "second argument"));
+        if (idx >= s.size())
+            throw std::runtime_error("Built-in 'charat': index " + std::to_string(idx) +
+                                     " out of bounds for string of length " +
+                                     std::to_string(s.size()));
+        return std::string(1, s[idx]);
+    }
+
+    if (name == "substr") {
+        requireArityMin(2);
+        const std::string& s = requireString(args[0], name, "first argument");
+        size_t start = static_cast<size_t>(requireDouble(args[1], name, "second argument"));
+        if (start > s.size()) start = s.size();
+        if (args.size() == 2) return s.substr(start);
+        size_t len = static_cast<size_t>(requireDouble(args[2], name, "third argument"));
+        return s.substr(start, len);
+    }
+
+    if (name == "split") {
+        requireArity(2);
+        const std::string& s = requireString(args[0], name, "first argument");
+        const std::string& delim = requireString(args[1], name, "second argument");
+        auto lst = std::make_shared<LumoList>();
+        if (delim.empty()) {
+            // Split into individual characters
+            for (char c : s) lst->elements.emplace_back(std::string(1, c));
+        } else {
+            size_t pos = 0, found;
+            while ((found = s.find(delim, pos)) != std::string::npos) {
+                lst->elements.emplace_back(s.substr(pos, found - pos));
+                pos = found + delim.size();
+            }
+            lst->elements.emplace_back(s.substr(pos));
+        }
+        return lst;
+    }
+
+    if (name == "join") {
+        requireArity(2);
+        auto lst = requireList(args[0], name, "first argument");
+        const std::string& sep = requireString(args[1], name, "second argument");
+        std::string result;
+        for (size_t i = 0; i < lst->elements.size(); ++i) {
+            if (i) result += sep;
+            result += lumoValueToString(lst->elements[i]);
+        }
+        return result;
+    }
+
+    if (name == "contains") {
+        requireArity(2);
+        if (std::holds_alternative<std::string>(args[0])) {
+            const std::string& s = std::get<std::string>(args[0]);
+            const std::string& sub = requireString(args[1], name, "second argument");
+            return static_cast<bool>(s.find(sub) != std::string::npos);
+        }
+        if (std::holds_alternative<std::shared_ptr<LumoList>>(args[0])) {
+            auto lst = std::get<std::shared_ptr<LumoList>>(args[0]);
+            for (const auto& elem : lst->elements)
+                if (valuesEqual(elem, args[1])) return true;
+            return false;
+        }
+        throw std::runtime_error("Built-in 'contains': first argument must be a string or list");
+    }
+
+    if (name == "replace") {
+        requireArity(3);
+        std::string s = requireString(args[0], name, "first argument");
+        const std::string& from = requireString(args[1], name, "second argument");
+        const std::string& to = requireString(args[2], name, "third argument");
+        if (from.empty()) return s;
+        size_t pos = 0;
+        while ((pos = s.find(from, pos)) != std::string::npos) {
+            s.replace(pos, from.size(), to);
+            pos += to.size();
+        }
+        return s;
+    }
+
+    if (name == "trim") {
+        requireArity(1);
+        std::string s = requireString(args[0], name, "first argument");
+        size_t b = s.find_first_not_of(" \t\r\n");
+        if (b == std::string::npos) return std::string("");
+        size_t e = s.find_last_not_of(" \t\r\n");
+        return s.substr(b, e - b + 1);
+    }
+
+    if (name == "uppercase") {
+        requireArity(1);
+        std::string s = requireString(args[0], name, "first argument");
+        std::transform(s.begin(), s.end(), s.begin(), ::toupper);
+        return s;
+    }
+
+    if (name == "lowercase") {
+        requireArity(1);
+        std::string s = requireString(args[0], name, "first argument");
+        std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+        return s;
+    }
+
+    if (name == "charcode") {
+        requireArity(1);
+        const std::string& s = requireString(args[0], name, "first argument");
+        if (s.empty())
+            throw std::runtime_error("Built-in 'charcode': string must not be empty");
+        return static_cast<double>(static_cast<unsigned char>(s[0]));
+    }
+
+    if (name == "fromcode") {
+        requireArity(1);
+        double code = requireDouble(args[0], name, "first argument");
+        return std::string(1, static_cast<char>(static_cast<int>(code)));
+    }
+
+    if (name == "indexof") {
+        requireArity(2);
+        if (std::holds_alternative<std::string>(args[0])) {
+            const std::string& s = std::get<std::string>(args[0]);
+            const std::string& sub = requireString(args[1], name, "second argument");
+            size_t pos = s.find(sub);
+            return pos == std::string::npos ? -1.0 : static_cast<double>(pos);
+        }
+        if (std::holds_alternative<std::shared_ptr<LumoList>>(args[0])) {
+            auto lst = std::get<std::shared_ptr<LumoList>>(args[0]);
+            for (size_t i = 0; i < lst->elements.size(); ++i)
+                if (valuesEqual(lst->elements[i], args[1])) return static_cast<double>(i);
+            return -1.0;
+        }
+        throw std::runtime_error("Built-in 'indexof': first argument must be a string or list");
+    }
+
+    if (name == "startswith") {
+        requireArity(2);
+        const std::string& s = requireString(args[0], name, "first argument");
+        const std::string& prefix = requireString(args[1], name, "second argument");
+        return static_cast<bool>(s.size() >= prefix.size() &&
+                                 s.substr(0, prefix.size()) == prefix);
+    }
+
+    if (name == "endswith") {
+        requireArity(2);
+        const std::string& s = requireString(args[0], name, "first argument");
+        const std::string& suffix = requireString(args[1], name, "second argument");
+        return static_cast<bool>(s.size() >= suffix.size() &&
+                                 s.substr(s.size() - suffix.size()) == suffix);
+    }
+
+    // ── List operations ──────────────────────────────────────────────────────
+
+    if (name == "push") {
+        requireArity(2);
+        // Mutates the list in place (shared_ptr — caller sees the change)
+        auto lst = requireList(args[0], name, "first argument");
+        lst->elements.push_back(args[1]);
+        return args[0]; // return the same list
+    }
+
+    if (name == "pop") {
+        requireArity(1);
+        auto lst = requireList(args[0], name, "first argument");
+        if (lst->elements.empty())
+            throw std::runtime_error("Built-in 'pop': cannot pop from an empty list");
+        LumoValue last = lst->elements.back();
+        lst->elements.pop_back();
+        return last;
+    }
+
+    if (name == "concat") {
+        requireArity(2);
+        auto a = requireList(args[0], name, "first argument");
+        auto b = requireList(args[1], name, "second argument");
+        auto result = std::make_shared<LumoList>();
+        result->elements = a->elements;
+        result->elements.insert(result->elements.end(), b->elements.begin(), b->elements.end());
+        return result;
+    }
+
+    if (name == "slice") {
+        requireArityMin(2);
+        if (std::holds_alternative<std::shared_ptr<LumoList>>(args[0])) {
+            auto lst = std::get<std::shared_ptr<LumoList>>(args[0]);
+            long long start = static_cast<long long>(requireDouble(args[1], name, "second argument"));
+            long long n = static_cast<long long>(lst->elements.size());
+            if (start < 0) start = std::max(0LL, n + start);
+            if (start > n) start = n;
+            long long end = n;
+            if (args.size() >= 3) {
+                end = static_cast<long long>(requireDouble(args[2], name, "third argument"));
+                if (end < 0) end = std::max(0LL, n + end);
+                if (end > n) end = n;
+            }
+            auto result = std::make_shared<LumoList>();
+            for (long long i = start; i < end; ++i)
+                result->elements.push_back(lst->elements[static_cast<size_t>(i)]);
+            return result;
+        }
+        if (std::holds_alternative<std::string>(args[0])) {
+            const std::string& s = std::get<std::string>(args[0]);
+            long long start = static_cast<long long>(requireDouble(args[1], name, "second argument"));
+            long long n = static_cast<long long>(s.size());
+            if (start < 0) start = std::max(0LL, n + start);
+            if (start > n) start = n;
+            long long end = n;
+            if (args.size() >= 3) {
+                end = static_cast<long long>(requireDouble(args[2], name, "third argument"));
+                if (end < 0) end = std::max(0LL, n + end);
+                if (end > n) end = n;
+            }
+            return s.substr(static_cast<size_t>(start),
+                            static_cast<size_t>(end - start));
+        }
+        throw std::runtime_error("Built-in 'slice': first argument must be a string or list");
+    }
+
+    if (name == "reverse") {
+        requireArity(1);
+        if (std::holds_alternative<std::string>(args[0])) {
+            std::string s = std::get<std::string>(args[0]);
+            std::reverse(s.begin(), s.end());
+            return s;
+        }
+        auto lst = requireList(args[0], name, "first argument");
+        auto result = std::make_shared<LumoList>();
+        result->elements = lst->elements;
+        std::reverse(result->elements.begin(), result->elements.end());
+        return result;
+    }
+
+    if (name == "range") {
+        requireArityMin(1);
+        auto lst = std::make_shared<LumoList>();
+        if (args.size() == 1) {
+            long long n = static_cast<long long>(requireDouble(args[0], name, "first argument"));
+            for (long long i = 0; i < n; ++i) lst->elements.push_back(static_cast<double>(i));
+        } else {
+            long long start = static_cast<long long>(requireDouble(args[0], name, "first argument"));
+            long long end   = static_cast<long long>(requireDouble(args[1], name, "second argument"));
+            long long step  = 1;
+            if (args.size() >= 3) step = static_cast<long long>(requireDouble(args[2], name, "third argument"));
+            if (step == 0) throw std::runtime_error("Built-in 'range': step cannot be zero");
+            if (step > 0) for (long long i = start; i < end; i += step) lst->elements.push_back(static_cast<double>(i));
+            else          for (long long i = start; i > end; i += step) lst->elements.push_back(static_cast<double>(i));
+        }
+        return lst;
+    }
+
+    // ── Type operations ──────────────────────────────────────────────────────
+
+    if (name == "typeof") {
+        requireArity(1);
+        if (std::holds_alternative<double>(args[0]))                           return std::string("number");
+        if (std::holds_alternative<std::string>(args[0]))                      return std::string("string");
+        if (std::holds_alternative<bool>(args[0]))                             return std::string("boolean");
+        if (std::holds_alternative<std::shared_ptr<LumoList>>(args[0]))        return std::string("list");
+        if (std::holds_alternative<std::shared_ptr<LumoObject>>(args[0]))      return std::string("object");
+        return std::string("unknown");
+    }
+
+    if (name == "tostring") {
+        requireArity(1);
+        return lumoValueToString(args[0]);
+    }
+
+    if (name == "tonumber") {
+        requireArity(1);
+        if (std::holds_alternative<double>(args[0])) return args[0];
+        if (std::holds_alternative<bool>(args[0]))   return std::get<bool>(args[0]) ? 1.0 : 0.0;
+        if (std::holds_alternative<std::string>(args[0])) {
+            const std::string& s = std::get<std::string>(args[0]);
+            try { return std::stod(s); }
+            catch (...) {
+                throw std::runtime_error("Built-in 'tonumber': cannot convert \"" + s + "\" to number");
+            }
+        }
+        throw std::runtime_error("Built-in 'tonumber': cannot convert " +
+                                 lumoValueToString(args[0]) + " to number");
+    }
+
+    if (name == "tobool") {
+        requireArity(1);
+        return isTruthy(args[0]);
+    }
+
+    // ── Math ─────────────────────────────────────────────────────────────────
+
+    if (name == "floor") {
+        requireArity(1);
+        return std::floor(requireDouble(args[0], name, "first argument"));
+    }
+    if (name == "ceil") {
+        requireArity(1);
+        return std::ceil(requireDouble(args[0], name, "first argument"));
+    }
+    if (name == "round") {
+        requireArity(1);
+        return std::round(requireDouble(args[0], name, "first argument"));
+    }
+    if (name == "abs") {
+        requireArity(1);
+        return std::abs(requireDouble(args[0], name, "first argument"));
+    }
+    if (name == "sqrt") {
+        requireArity(1);
+        double v = requireDouble(args[0], name, "first argument");
+        if (v < 0.0) throw std::runtime_error("Built-in 'sqrt': argument must be non-negative");
+        return std::sqrt(v);
+    }
+    if (name == "power") {
+        requireArity(2);
+        return std::pow(requireDouble(args[0], name, "first argument"),
+                        requireDouble(args[1], name, "second argument"));
+    }
+    if (name == "min") {
+        requireArityMin(1);
+        double result = requireDouble(args[0], name, "first argument");
+        for (size_t i = 1; i < args.size(); ++i)
+            result = std::min(result, requireDouble(args[i], name, "argument"));
+        return result;
+    }
+    if (name == "max") {
+        requireArityMin(1);
+        double result = requireDouble(args[0], name, "first argument");
+        for (size_t i = 1; i < args.size(); ++i)
+            result = std::max(result, requireDouble(args[i], name, "argument"));
+        return result;
+    }
+
+    // ── Object operations ────────────────────────────────────────────────────
+
+    if (name == "keys") {
+        requireArity(1);
+        auto obj = std::get<std::shared_ptr<LumoObject>>(
+            std::holds_alternative<std::shared_ptr<LumoObject>>(args[0])
+                ? args[0]
+                : throw std::runtime_error("Built-in 'keys': argument must be an object"));
+        auto lst = std::make_shared<LumoList>();
+        for (const auto& kv : obj->fields) lst->elements.emplace_back(kv.first);
+        return lst;
+    }
+
+    if (name == "values") {
+        requireArity(1);
+        if (!std::holds_alternative<std::shared_ptr<LumoObject>>(args[0]))
+            throw std::runtime_error("Built-in 'values': argument must be an object");
+        auto obj = std::get<std::shared_ptr<LumoObject>>(args[0]);
+        auto lst = std::make_shared<LumoList>();
+        for (const auto& kv : obj->fields) lst->elements.push_back(kv.second);
+        return lst;
+    }
+
+    if (name == "haskey") {
+        requireArity(2);
+        if (!std::holds_alternative<std::shared_ptr<LumoObject>>(args[0]))
+            throw std::runtime_error("Built-in 'haskey': first argument must be an object");
+        auto obj = std::get<std::shared_ptr<LumoObject>>(args[0]);
+        const std::string& key = requireString(args[1], name, "second argument");
+        return static_cast<bool>(obj->fields.count(key) > 0);
+    }
+
+    if (name == "entries") {
+        requireArity(1);
+        if (!std::holds_alternative<std::shared_ptr<LumoObject>>(args[0]))
+            throw std::runtime_error("Built-in 'entries': argument must be an object");
+        auto obj = std::get<std::shared_ptr<LumoObject>>(args[0]);
+        auto lst = std::make_shared<LumoList>();
+        for (const auto& kv : obj->fields) {
+            auto pair = std::make_shared<LumoList>();
+            pair->elements.emplace_back(kv.first);
+            pair->elements.push_back(kv.second);
+            lst->elements.push_back(pair);
+        }
+        return lst;
+    }
+
+    // ── I/O ──────────────────────────────────────────────────────────────────
+
+    if (name == "readfile") {
+        requireArity(1);
+        const std::string& path = requireString(args[0], name, "first argument");
+        std::ifstream f(path);
+        if (!f.is_open())
+            throw std::runtime_error("Built-in 'readfile': cannot open file: " + path);
+        std::ostringstream buf;
+        buf << f.rdbuf();
+        return buf.str();
+    }
+
+    throw std::runtime_error("Unknown built-in: " + name);
 }

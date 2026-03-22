@@ -105,4 +105,12 @@ private:
 
     bool isTruthy(const LumoValue& v) const;
     bool valuesEqual(const LumoValue& a, const LumoValue& b) const;
+
+    // Built-in standard library (called via `call name passing ...`)
+    bool isBuiltin(const std::string& name) const;
+    LumoValue callBuiltin(const std::string& name, std::vector<LumoValue>& args);
+
+public:
+    const std::unordered_map<std::string, LumoValue>& getEnv() const { return env; }
+    const std::unordered_map<std::string, const FunctionDecl*>& getFunctions() const { return functions; }
 };
