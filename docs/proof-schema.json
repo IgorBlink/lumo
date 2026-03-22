@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lumo Proof Manifest v1.0.0",
+  "description": "AI-generated proof of correctness for Lumo programs. Any AI model must produce a valid manifest to enable strict-mode execution.",
+  "type": "object",
+  "required": ["lumo_proof_version", "source_integrity", "declarations", "safety_properties"],
+  "properties": {
+    "lumo_proof_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "source_integrity": {
+      "type": "object",
+      "required": ["source_sha256", "source_line_count", "ast_node_count"],
+      "properties": {
+        "source_file": { "type": "string" },
+        "source_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "source_line_count": { "type": "integer", "minimum": 1 },
+        "ast_node_count": { "type": "integer", "minimum": 1 },
+        "ast_structure_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "declarations": {
+      "type": "object",
+      "required": ["variables", "functions"],
+      "properties": {
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "declared_at_line", "type", "is_mutated"],
+            "properties": {
+              "name": { "type": "string" },
+              "declared_at_line": { "type": "integer", "minimum": 1 },
+              "type": { "enum": ["number", "string", "boolean", "list", "object", "any"] },
+              "is_mutated": { "type": "boolean" },
+              "mutation_lines": { "type": "array", "items": { "type": "integer" } }
+            }
+          }
+        },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "declared_at_line", "param_count"],
+            "properties": {
+              "name": { "type": "string" },
+              "declared_at_line": { "type": "integer", "minimum": 1 },
+              "param_names": { "type": "array", "items": { "type": "string" } },
+              "param_count": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "type_assertions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["line", "asserted_type"],
+        "properties": {
+          "line": { "type": "integer", "minimum": 1 },
+          "expression": { "type": "string" },
+          "asserted_type": { "enum": ["number", "string", "boolean", "list", "object", "any", "never"] },
+          "reasoning": { "type": "string" }
+        }
+      }
+    },
+    "safety_properties": {
+      "type": "object",
+      "required": [
+        "no_uninitialized_access",
+        "no_division_by_zero",
+        "no_out_of_bounds_access",
+        "no_infinite_loops",
+        "no_unresolved_holes"
+      ],
+      "properties": {
+        "no_uninitialized_access": {
+          "type": "object",
+          "required": ["verified"],
+          "properties": {
+            "verified": { "type": "boolean" },
+            "evidence": { "type": "array" }
+          }
+        },
+        "no_division_by_zero": {
+          "type": "object",
+          "required": ["verified"],
+          "properties": {
+            "verified": { "type": "boolean" },
+            "evidence": { "type": "array" }
+          }
+        },
+        "no_out_of_bounds_access": {
+          "type": "object",
+          "required": ["verified"],
+          "properties": { "verified": { "type": "boolean" } }
+        },
+        "no_infinite_loops": {
+          "type": "object",
+          "required": ["verified"],
+          "properties": {
+            "verified": { "type": "boolean" },
+            "evidence": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "loop_line": { "type": "integer" },
+                  "loop_type": { "enum": ["repeat_while", "for_each", "repeat_times"] },
+                  "termination_argument": { "type": "string" },
+                  "variant_expression": { "type": "string" },
+                  "terminates": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "no_unresolved_holes": {
+          "type": "object",
+          "required": ["verified", "hole_count"],
+          "properties": {
+            "verified": { "type": "boolean" },
+            "hole_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "no_unused_variables": {
+          "type": "object",
+          "properties": { "verified": { "type": "boolean" } }
+        },
+        "no_unreachable_code": {
+          "type": "object",
+          "properties": { "verified": { "type": "boolean" } }
+        }
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "properties": {
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "preconditions": { "type": "array", "items": { "type": "string" } },
+              "postconditions": { "type": "array", "items": { "type": "string" } },
+              "return_type": { "type": "string" },
+              "terminates": { "type": "boolean" },
+              "termination_argument": { "type": "string" }
+            }
+          }
+        },
+        "loop_invariants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "loop_line": { "type": "integer" },
+              "invariant": { "type": "string" },
+              "variant": { "type": "string" },
+              "terminates": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "pattern_compliance": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern_id", "satisfied"],
+        "properties": {
+          "pattern_id": { "type": "string" },
+          "satisfied": { "type": "boolean" },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "vulnerability_analysis": {
+      "type": "object",
+      "properties": {
+        "input_sources": { "type": "array" },
+        "injection_vectors": { "type": "array", "items": { "type": "string" } },
+        "resource_management": {
+          "type": "object",
+          "properties": {
+            "unbounded_allocations": { "type": "boolean" },
+            "reasoning": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "lumo_proof_version": "1.0.0",
+  "source_integrity": {
+    "source_file": "examples/hello.lumo",
+    "source_sha256": "603ad34d0daeb13a36ba1159ee79e7b61b03b4d11767c56030c104dc14a92cea",
+    "source_line_count": 3,
+    "ast_node_count": 4,
+    "ast_structure_hash": "4f3e57a4c06300a0dfc65fa6496cb91b861fcff7ec9b7a1c80fc7a64fb872c96"
+  },
+  "declarations": {
+    "variables": [],
+    "functions": []
+  },
+  "type_assertions": [
+    {
+      "line": 2,
+      "expression": "\"Hello, World!\"",
+      "asserted_type": "string",
+      "reasoning": "string literal"
+    }
+  ],
+  "safety_properties": {
+    "no_uninitialized_access": { "verified": true, "evidence": [] },
+    "no_division_by_zero": { "verified": true, "evidence": [] },
+    "no_out_of_bounds_access": { "verified": true, "evidence": [] },
+    "no_infinite_loops": { "verified": true, "evidence": [] },
+    "no_unresolved_holes": { "verified": true, "hole_count": 0 },
+    "no_unused_variables": { "verified": true },
+    "no_unreachable_code": { "verified": true }
+  },
+  "contracts": {
+    "functions": [],
+    "loop_invariants": []
+  },
+  "pattern_compliance": [
+    {
+      "pattern_id": "lumo:intent-required",
+      "satisfied": true,
+      "evidence": "intent declaration at line 1"
+    }
+  ],
+  "vulnerability_analysis": {
+    "input_sources": [],
+    "injection_vectors": [],
+    "resource_management": { "unbounded_allocations": false, "reasoning": "no dynamic allocations" }
+  }
+}

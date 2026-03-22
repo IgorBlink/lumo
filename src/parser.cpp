@@ -99,8 +99,9 @@ std::unique_ptr<StmtNode> Parser::parseStatement() {
 }
 
 std::unique_ptr<IntentDecl> Parser::parseIntentDecl() {
+    auto loc = previous(); // the INTENT token
     Token strToken = consume(TokenType::STRING_LITERAL, "Expected string after 'intent'");
-    return std::make_unique<IntentDecl>(strToken.value);
+    return withLoc(std::make_unique<IntentDecl>(strToken.value), loc);
 }
 
 std::unique_ptr<LetDecl> Parser::parseLetDecl() {
@@ -114,7 +115,7 @@ std::unique_ptr<LetDecl> Parser::parseLetDecl() {
     auto expr = parseExpression();
     // Fix 2: track declared variables for for-each shadow check
     declaredVars.insert(name.value);
-    return std::make_unique<LetDecl>(name.value, std::move(expr));
+    return withLoc(std::make_unique<LetDecl>(name.value, std::move(expr)), name);
 }
 
 std::unique_ptr<SetDecl> Parser::parseSetDecl() {
@@ -125,22 +126,24 @@ std::unique_ptr<SetDecl> Parser::parseSetDecl() {
     Token name = consume(TokenType::IDENTIFIER, "Expected variable name after 'set'");
     consume(TokenType::BE, "Expected 'be' after variable name");
     auto expr = parseExpression();
-    return std::make_unique<SetDecl>(name.value, std::move(expr));
+    return withLoc(std::make_unique<SetDecl>(name.value, std::move(expr)), name);
 }
 
 std::unique_ptr<PrintDecl> Parser::parsePrintDecl() {
+    auto loc = previous(); // the PRINT token
     auto expr = parseExpression();
-    return std::make_unique<PrintDecl>(std::move(expr));
+    return withLoc(std::make_unique<PrintDecl>(std::move(expr)), loc);
 }
 
 std::unique_ptr<SkipDecl> Parser::parseSkipDecl() {
-    return std::make_unique<SkipDecl>();
+    return withLoc(std::make_unique<SkipDecl>(), previous());
 }
 
 // Fix 6: read <name>
 std::unique_ptr<ReadDecl> Parser::parseReadDecl() {
+    auto loc = previous(); // the READ token
     Token name = consume(TokenType::IDENTIFIER, "Expected variable name after 'read'");
-    return std::make_unique<ReadDecl>(name.value);
+    return withLoc(std::make_unique<ReadDecl>(name.value), loc);
 }
 
 // ─── repeat while <cond> … end  /  repeat <count> times … end ────────────────
@@ -152,7 +155,7 @@ std::unique_ptr<StmtNode> Parser::parseRepeatDecl() {
         consume(TokenType::NEWLINE, "Expected newline after repeat condition");
         skipNewlines();
 
-        auto repeatDecl = std::make_unique<RepeatDecl>(std::move(condition));
+        auto repeatDecl = withLoc(std::make_unique<RepeatDecl>(std::move(condition)), previous());
         while (!check(TokenType::END) && !isAtEnd()) {
             skipNewlines();
             if (check(TokenType::END)) break;
@@ -171,7 +174,7 @@ std::unique_ptr<StmtNode> Parser::parseRepeatDecl() {
     consume(TokenType::NEWLINE, "Expected newline after 'times'");
     skipNewlines();
 
-    auto repeatTimes = std::make_unique<RepeatTimesDecl>(std::move(countExpr));
+    auto repeatTimes = withLoc(std::make_unique<RepeatTimesDecl>(std::move(countExpr)), previous());
     while (!check(TokenType::END) && !isAtEnd()) {
         skipNewlines();
         if (check(TokenType::END)) break;
@@ -198,7 +201,7 @@ std::unique_ptr<ForEachDecl> Parser::parseForEachDecl() {
     consume(TokenType::NEWLINE, "Expected newline after list expression");
     skipNewlines();
 
-    auto forEach = std::make_unique<ForEachDecl>(varTok.value, std::move(listExpr));
+    auto forEach = withLoc(std::make_unique<ForEachDecl>(varTok.value, std::move(listExpr)), varTok);
     while (!check(TokenType::END) && !isAtEnd()) {
         skipNewlines();
         if (check(TokenType::END)) break;
@@ -278,7 +281,7 @@ std::unique_ptr<FunctionDecl> Parser::parseFunctionDecl() {
     consume(TokenType::NEWLINE, "Expected newline after function declaration");
     skipNewlines();
 
-    auto funcDecl = std::make_unique<FunctionDecl>(name.value, std::move(params));
+    auto funcDecl = withLoc(std::make_unique<FunctionDecl>(name.value, std::move(params)), name);
 
     while (!check(TokenType::END) && !isAtEnd()) {
         skipNewlines();
@@ -292,8 +295,9 @@ std::unique_ptr<FunctionDecl> Parser::parseFunctionDecl() {
 }
 
 std::unique_ptr<ReturnStmt> Parser::parseReturnStmt() {
+    auto loc = previous(); // the RETURN_KW token
     auto expr = parseExpression();
-    return std::make_unique<ReturnStmt>(std::move(expr));
+    return withLoc(std::make_unique<ReturnStmt>(std::move(expr)), loc);
 }
 
 // ─── call <name> [passing arg1, arg2]  — statement form ──────────────────────
@@ -301,7 +305,7 @@ std::unique_ptr<ReturnStmt> Parser::parseReturnStmt() {
 std::unique_ptr<CallStmt> Parser::parseCallStmt() {
     Token name = consume(TokenType::IDENTIFIER, "Expected function name after 'call'");
     auto args = parseCallArgs();
-    return std::make_unique<CallStmt>(name.value, std::move(args));
+    return withLoc(std::make_unique<CallStmt>(name.value, std::move(args)), name);
 }
 
 std::vector<std::unique_ptr<ExprNode>> Parser::parseCallArgs() {
@@ -327,7 +331,7 @@ std::unique_ptr<PutDecl> Parser::parsePutDecl() {
     auto index = parseExpression();
     consume(TokenType::BE, "Expected 'be' after index");
     auto val = parseExpression();
-    return std::make_unique<PutDecl>(name.value, std::move(index), std::move(val));
+    return withLoc(std::make_unique<PutDecl>(name.value, std::move(index), std::move(val)), name);
 }
 
 // ─── pipe <name> … end ───────────────────────────────────────────────────────
@@ -337,7 +341,7 @@ std::unique_ptr<PipeDecl> Parser::parsePipeDecl() {
     consume(TokenType::NEWLINE, "Expected newline after pipeline name");
     skipNewlines();
 
-    auto pipe = std::make_unique<PipeDecl>(name.value);
+    auto pipe = withLoc(std::make_unique<PipeDecl>(name.value), name);
 
     while (!check(TokenType::END) && !isAtEnd()) {
         skipNewlines();
@@ -437,8 +441,9 @@ std::unique_ptr<ExprNode> Parser::parseExpression() {
 std::unique_ptr<ExprNode> Parser::parseOrExpr() {
     auto left = parseAndExpr();
     while (match(TokenType::OR)) {
+        auto opTok = previous();
         auto right = parseAndExpr();
-        left = std::make_unique<BinaryExpr>("or", std::move(left), std::move(right));
+        left = withLoc(std::make_unique<BinaryExpr>("or", std::move(left), std::move(right)), opTok);
     }
     return left;
 }
@@ -446,16 +451,18 @@ std::unique_ptr<ExprNode> Parser::parseOrExpr() {
 std::unique_ptr<ExprNode> Parser::parseAndExpr() {
     auto left = parseNotExpr();
     while (match(TokenType::AND)) {
+        auto opTok = previous();
         auto right = parseNotExpr();
-        left = std::make_unique<BinaryExpr>("and", std::move(left), std::move(right));
+        left = withLoc(std::make_unique<BinaryExpr>("and", std::move(left), std::move(right)), opTok);
     }
     return left;
 }
 
 std::unique_ptr<ExprNode> Parser::parseNotExpr() {
     if (match(TokenType::NOT)) {
+        auto opTok = previous();
         auto operand = parseNotExpr();
-        return std::make_unique<UnaryExpr>("not", std::move(operand));
+        return withLoc(std::make_unique<UnaryExpr>("not", std::move(operand)), opTok);
     }
     return parseCompExpr();
 }
@@ -465,24 +472,29 @@ std::unique_ptr<ExprNode> Parser::parseCompExpr() {
 
     // Fix 1: add atleast (>=) and atmost (<=)
     if (match(TokenType::EQUALS)) {
+        auto opTok = previous();
         auto right = parseAddExpr();
-        return std::make_unique<BinaryExpr>("equals", std::move(left), std::move(right));
+        return withLoc(std::make_unique<BinaryExpr>("equals", std::move(left), std::move(right)), opTok);
     }
     if (match(TokenType::ABOVE)) {
+        auto opTok = previous();
         auto right = parseAddExpr();
-        return std::make_unique<BinaryExpr>("above", std::move(left), std::move(right));
+        return withLoc(std::make_unique<BinaryExpr>("above", std::move(left), std::move(right)), opTok);
     }
     if (match(TokenType::BELOW)) {
+        auto opTok = previous();
         auto right = parseAddExpr();
-        return std::make_unique<BinaryExpr>("below", std::move(left), std::move(right));
+        return withLoc(std::make_unique<BinaryExpr>("below", std::move(left), std::move(right)), opTok);
     }
     if (match(TokenType::ATLEAST)) {
+        auto opTok = previous();
         auto right = parseAddExpr();
-        return std::make_unique<BinaryExpr>("atleast", std::move(left), std::move(right));
+        return withLoc(std::make_unique<BinaryExpr>("atleast", std::move(left), std::move(right)), opTok);
     }
     if (match(TokenType::ATMOST)) {
+        auto opTok = previous();
         auto right = parseAddExpr();
-        return std::make_unique<BinaryExpr>("atmost", std::move(left), std::move(right));
+        return withLoc(std::make_unique<BinaryExpr>("atmost", std::move(left), std::move(right)), opTok);
     }
 
     return left;
@@ -492,11 +504,13 @@ std::unique_ptr<ExprNode> Parser::parseAddExpr() {
     auto left = parseMulExpr();
     while (true) {
         if (match(TokenType::PLUS)) {
+            auto opTok = previous();
             auto right = parseMulExpr();
-            left = std::make_unique<BinaryExpr>("plus", std::move(left), std::move(right));
+            left = withLoc(std::make_unique<BinaryExpr>("plus", std::move(left), std::move(right)), opTok);
         } else if (match(TokenType::MINUS)) {
+            auto opTok = previous();
             auto right = parseMulExpr();
-            left = std::make_unique<BinaryExpr>("minus", std::move(left), std::move(right));
+            left = withLoc(std::make_unique<BinaryExpr>("minus", std::move(left), std::move(right)), opTok);
         } else {
             break;
         }
@@ -508,14 +522,17 @@ std::unique_ptr<ExprNode> Parser::parseMulExpr() {
     auto left = parsePrimary();
     while (true) {
         if (match(TokenType::TIMES)) {
+            auto opTok = previous();
             auto right = parsePrimary();
-            left = std::make_unique<BinaryExpr>("times", std::move(left), std::move(right));
+            left = withLoc(std::make_unique<BinaryExpr>("times", std::move(left), std::move(right)), opTok);
         } else if (match(TokenType::DIVBY)) {
+            auto opTok = previous();
             auto right = parsePrimary();
-            left = std::make_unique<BinaryExpr>("divby", std::move(left), std::move(right));
+            left = withLoc(std::make_unique<BinaryExpr>("divby", std::move(left), std::move(right)), opTok);
         } else if (match(TokenType::MODULO)) {
+            auto opTok = previous();
             auto right = parsePrimary();
-            left = std::make_unique<BinaryExpr>("modulo", std::move(left), std::move(right));
+            left = withLoc(std::make_unique<BinaryExpr>("modulo", std::move(left), std::move(right)), opTok);
         } else {
             break;
         }
@@ -525,23 +542,30 @@ std::unique_ptr<ExprNode> Parser::parseMulExpr() {
 
 std::unique_ptr<ExprNode> Parser::parsePrimary() {
     if (match(TokenType::NUMBER)) {
-        return std::make_unique<NumberExpr>(previous().value);
+        auto tok = previous();
+        return withLoc(std::make_unique<NumberExpr>(tok.value), tok);
     }
     if (match(TokenType::STRING_LITERAL)) {
-        return std::make_unique<StringLiteralExpr>(previous().value);
+        auto tok = previous();
+        return withLoc(std::make_unique<StringLiteralExpr>(tok.value), tok);
     }
     if (match(TokenType::TRUE_LIT)) {
-        return std::make_unique<BoolLiteralExpr>(true);
+        return withLoc(std::make_unique<BoolLiteralExpr>(true), previous());
     }
     if (match(TokenType::FALSE_LIT)) {
-        return std::make_unique<BoolLiteralExpr>(false);
+        return withLoc(std::make_unique<BoolLiteralExpr>(false), previous());
     }
     if (match(TokenType::HOLE)) {
+        auto holeTok = previous();
         Token strToken = consume(TokenType::STRING_LITERAL, "Expected string literal after hole");
-        return std::make_unique<HoleExpr>(strToken.value, strToken.line);
+        return withLoc(std::make_unique<HoleExpr>(strToken.value, strToken.line), holeTok);
     }
     if (match(TokenType::LBRACE)) {
-        return parseJsonObject();
+        auto loc = previous();
+        auto obj = parseJsonObject();
+        obj->line = loc.line;
+        obj->column = loc.column;
+        return obj;
     }
     if (match(TokenType::LPAREN)) {
         auto expr = parseExpression();
@@ -550,7 +574,10 @@ std::unique_ptr<ExprNode> Parser::parsePrimary() {
     }
     // list <elem1>, <elem2>, ...
     if (match(TokenType::LIST_KW)) {
+        auto loc = previous();
         auto listExpr = std::make_unique<ListExpr>();
+        listExpr->line = loc.line;
+        listExpr->column = loc.column;
         if (!check(TokenType::NEWLINE) && !isAtEnd()) {
             listExpr->elements.push_back(parseExpression());
             while (match(TokenType::COMMA)) {
@@ -561,20 +588,23 @@ std::unique_ptr<ExprNode> Parser::parsePrimary() {
     }
     // get <list-expr> at <index-expr>
     if (match(TokenType::GET_KW)) {
+        auto loc = previous();
         auto containerExpr = parseExpression();
         consume(TokenType::AT, "Expected 'at' after container expression in 'get'");
         auto indexExpr = parseExpression();
-        return std::make_unique<GetExpr>(std::move(containerExpr), std::move(indexExpr));
+        return withLoc(std::make_unique<GetExpr>(std::move(containerExpr), std::move(indexExpr)), loc);
     }
     // call <name> [passing arg1, arg2, ...]  — expression form
     if (match(TokenType::CALL_KW)) {
+        auto loc = previous();
         Token name = consume(TokenType::IDENTIFIER, "Expected function name after 'call'");
         auto args = parseCallArgs();
-        return std::make_unique<CallExpr>(name.value, std::move(args));
+        return withLoc(std::make_unique<CallExpr>(name.value, std::move(args)), loc);
     }
     // Fix 3: `value` is still a reserved readable primary; `result` is now a plain IDENTIFIER
     if (match({TokenType::IDENTIFIER, TokenType::VALUE})) {
-        return std::make_unique<IdentifierExpr>(previous().value);
+        auto tok = previous();
+        return withLoc(std::make_unique<IdentifierExpr>(tok.value), tok);
     }
 
     error(peek(), "Expected expression");

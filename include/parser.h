@@ -67,4 +67,12 @@ private:
     std::vector<std::unique_ptr<ExprNode>> parseCallArgs();
 
     void error(const Token& token, const std::string& message);
+
+    // Helpers to set line/column on AST nodes from the current or previous token
+    template<typename T>
+    std::unique_ptr<T> withLoc(std::unique_ptr<T> node, const Token& tok) {
+        node->line = tok.line;
+        node->column = tok.column;
+        return node;
+    }
 };

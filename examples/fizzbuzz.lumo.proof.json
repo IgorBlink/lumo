@@ -1,0 +1,95 @@
+{
+  "lumo_proof_version": "1.0.0",
+  "source_integrity": {
+    "source_file": "examples/fizzbuzz.lumo",
+    "source_sha256": "3f004f705c9a0c122eed958c28ed9c98bbe653f914331f985ea9aee5e01028b0",
+    "source_line_count": 17,
+    "ast_node_count": 42,
+    "ast_structure_hash": "d94a9cf14005d5b44fe7c09b27fab3343161c6d77aa1304a68592325f70c7a15"
+  },
+  "declarations": {
+    "variables": [
+      {
+        "name": "i",
+        "declared_at_line": 2,
+        "type": "number",
+        "is_mutated": true,
+        "mutation_lines": [15]
+      },
+      {
+        "name": "mod3",
+        "declared_at_line": 4,
+        "type": "number",
+        "is_mutated": false,
+        "mutation_lines": []
+      },
+      {
+        "name": "mod5",
+        "declared_at_line": 5,
+        "type": "number",
+        "is_mutated": false,
+        "mutation_lines": []
+      }
+    ],
+    "functions": []
+  },
+  "type_assertions": [
+    { "line": 2, "expression": "1", "asserted_type": "number", "reasoning": "numeric literal" },
+    { "line": 4, "expression": "i modulo 3", "asserted_type": "number", "reasoning": "modulo produces number" },
+    { "line": 5, "expression": "i modulo 5", "asserted_type": "number", "reasoning": "modulo produces number" },
+    { "line": 6, "expression": "mod3 equals 0 and mod5 equals 0", "asserted_type": "boolean", "reasoning": "equals produces boolean; and of booleans is boolean" },
+    { "line": 15, "expression": "i plus 1", "asserted_type": "number", "reasoning": "number plus number is number" }
+  ],
+  "safety_properties": {
+    "no_uninitialized_access": {
+      "verified": true,
+      "evidence": [
+        { "variable": "i", "first_use_line": 3, "declaration_line": 2, "declaration_precedes_use": true },
+        { "variable": "mod3", "first_use_line": 6, "declaration_line": 4, "declaration_precedes_use": true },
+        { "variable": "mod5", "first_use_line": 6, "declaration_line": 5, "declaration_precedes_use": true }
+      ]
+    },
+    "no_division_by_zero": {
+      "verified": true,
+      "evidence": [
+        { "line": 4, "divisor_expression": "3", "divisor_is_literal_nonzero": true },
+        { "line": 5, "divisor_expression": "5", "divisor_is_literal_nonzero": true }
+      ]
+    },
+    "no_out_of_bounds_access": { "verified": true, "evidence": [] },
+    "no_infinite_loops": {
+      "verified": true,
+      "evidence": [
+        {
+          "loop_line": 3,
+          "loop_type": "repeat_while",
+          "termination_argument": "i starts at 1, increments by 1 each iteration (line 15), loop exits when i >= 21, therefore terminates after 20 iterations",
+          "variant_expression": "21 minus i",
+          "terminates": true
+        }
+      ]
+    },
+    "no_unresolved_holes": { "verified": true, "hole_count": 0 },
+    "no_unused_variables": { "verified": true },
+    "no_unreachable_code": { "verified": true }
+  },
+  "contracts": {
+    "functions": [],
+    "loop_invariants": [
+      {
+        "loop_line": 3,
+        "invariant": "i atleast 1 and i atmost 21",
+        "variant": "21 minus i",
+        "terminates": true
+      }
+    ]
+  },
+  "pattern_compliance": [
+    { "pattern_id": "lumo:intent-required", "satisfied": true, "evidence": "intent declaration at line 1" }
+  ],
+  "vulnerability_analysis": {
+    "input_sources": [],
+    "injection_vectors": [],
+    "resource_management": { "unbounded_allocations": false, "reasoning": "all variables are scalars or bounded" }
+  }
+}

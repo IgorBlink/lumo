@@ -14,7 +14,11 @@ public:
 
 // ─── Expressions ─────────────────────────────────────────────────────────────
 
-class ExprNode : public ASTNode {};
+class ExprNode : public ASTNode {
+public:
+    int line = 0;
+    int column = 0;
+};
 
 class IdentifierExpr : public ExprNode {
 public:
@@ -117,7 +121,11 @@ public:
 
 // ─── Statements ──────────────────────────────────────────────────────────────
 
-class StmtNode : public ASTNode {};
+class StmtNode : public ASTNode {
+public:
+    int line = 0;
+    int column = 0;
+};
 
 class IntentDecl : public StmtNode {
 public:
