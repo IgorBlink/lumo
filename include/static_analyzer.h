@@ -108,7 +108,7 @@ private:
 
     void pushScope();
     void popScope();
-    void declare(const std::string& name, LumoType type, int line);
+    void declare(const std::string& name, LumoType type, int line, bool isInternal = false);
     bool isDeclared(const std::string& name) const;
     LumoType lookupType(const std::string& name) const;
     void addError(int line, const std::string& msg);

@@ -29,11 +29,15 @@ void StaticAnalyzer::popScope() {
     if (!scopes.empty()) scopes.pop_back();
 }
 
-void StaticAnalyzer::declare(const std::string& name, LumoType type, int line) {
+void StaticAnalyzer::declare(const std::string& name, LumoType type, int line, bool isInternal) {
     if (!scopes.empty()) {
         scopes.back()[name] = { type, line };
     }
-    result.variables[name] = { type, line };
+    // Register in results unless this is an internal declaration
+    // (function parameters, for-each iteration variables)
+    if (!isInternal) {
+        result.variables[name] = { type, line };
+    }
 }
 
 bool StaticAnalyzer::isDeclared(const std::string& name) const {
@@ -152,7 +156,8 @@ void StaticAnalyzer::visit(const BinaryExpr& node) {
     }
 }
 
-void StaticAnalyzer::visit(const UnaryExpr&) {
+void StaticAnalyzer::visit(const UnaryExpr& node) {
+    node.operand->accept(*this);
     lastExprType = LumoType::BOOLEAN;
 }
 
@@ -257,7 +262,7 @@ void StaticAnalyzer::visit(const RepeatTimesDecl& node) {
 void StaticAnalyzer::visit(const ForEachDecl& node) {
     node.listExpr->accept(*this);
     pushScope();
-    declare(node.varName, LumoType::ANY, node.line);
+    declare(node.varName, LumoType::ANY, node.line, /*isInternal=*/true);
     for (auto& s : node.body) s->accept(*this);
     popScope();
 }
@@ -284,7 +289,7 @@ void StaticAnalyzer::visit(const FunctionDecl& node) {
     afterReturn = false;
 
     for (auto& p : node.params) {
-        declare(p, LumoType::ANY, node.line);
+        declare(p, LumoType::ANY, node.line, /*isInternal=*/true);
     }
     for (auto& s : node.body) {
         s->accept(*this);
@@ -328,12 +333,24 @@ void StaticAnalyzer::visit(const PutDecl& node) {
 // ── Pipe ────────────────────────────────────────────────────────────────────
 
 void StaticAnalyzer::visit(const StepNode& node) {
+    // Don't visit yield target as a reference — it's a declaration, not a use
+    if (node.op == StepOpType::YIELD) return;
     if (node.expr) node.expr->accept(*this);
 }
 
 void StaticAnalyzer::visit(const PipeDecl& node) {
+    // The yield target creates a variable in the enclosing scope, so register it
+    // before pushing a new scope. Also register the pipe name itself.
+    for (auto& step : node.steps) {
+        if (step->op == StepOpType::YIELD && step->expr) {
+            if (auto* ident = dynamic_cast<const IdentifierExpr*>(step->expr.get())) {
+                declare(ident->name, LumoType::LIST, node.line);
+            }
+        }
+    }
+
     pushScope();
-    declare(node.name, LumoType::LIST, node.line);
+    // Analyze steps inside a pipe scope (where 'value' is valid)
     for (auto& s : node.steps) s->accept(*this);
     popScope();
 }
