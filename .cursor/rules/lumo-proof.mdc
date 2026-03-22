@@ -1,0 +1,53 @@
+---
+description: "Lumo proof manifest generation — triggers when working with .proof.json files or discussing strict mode verification"
+globs: "*.proof.json"
+alwaysApply: false
+---
+
+# Lumo Proof Manifest Rules
+
+When generating `.lumo.proof.json` files for Lumo strict mode:
+
+## Process
+
+1. Run `./build/lumo --generate-proof-template file.lumo` to get the skeleton with pre-computed hashes
+2. NEVER modify `source_integrity` values — they are computed by the compiler
+3. Set ALL `safety_properties` to `"verified": true` with evidence
+4. Add `type_assertions` for every expression
+5. Add `contracts` for functions and loops
+6. Validate with `./build/lumo --strict --check file.lumo`
+
+## The Compiler Cross-Validates — You Cannot Lie About
+
+- Source hash (SHA-256 recomputed)
+- AST node count and structure hash
+- Variable names/existence (must match 1:1)
+- Function param counts
+- Mutation status (every `set`/`put`/`read` tracked)
+- Types the compiler infers (number, string, boolean, list, object)
+- Literal division by zero
+- Literal negative indices
+- Hole count (`???`)
+- Unused variables
+- Unreachable code after `return`
+
+## Required Safety Properties
+
+Every property must have `"verified": true`:
+
+- `no_uninitialized_access` — evidence: variable/declaration_line/first_use_line
+- `no_division_by_zero` — evidence: line/divisor_expression/divisor_is_literal_nonzero
+- `no_out_of_bounds_access` — evidence for each `get`/`put`
+- `no_infinite_loops` — evidence: loop_line/loop_type/termination_argument
+- `no_unresolved_holes` — hole_count must be 0
+- `no_unused_variables` — must match compiler analysis
+- `no_unreachable_code` — must match compiler analysis
+
+## Variable Rules for `declarations`
+
+Include: all `let` declarations (program-level AND inside loops/ifs), pipe `yield` targets
+Exclude: function parameters, `for each` iteration variables
+
+## Type Universe
+
+`"number"`, `"string"`, `"boolean"`, `"list"`, `"object"`, `"any"`, `"never"`

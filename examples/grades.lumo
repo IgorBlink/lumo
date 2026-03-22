@@ -1,0 +1,33 @@
+intent "Compute class average and letter grades for students"
+
+let scores be list 92, 85, 67, 74, 98, 53, 88
+
+let total be 0
+let count be 7
+let i be 0
+
+repeat while i below count
+  let score be get scores at i
+  set total be total plus score
+  set i be i plus 1
+end
+
+let average be total divby count
+print "Class average: " plus average
+
+let j be 0
+repeat while j below count
+  let grade be get scores at j
+  if grade atleast 90 then
+    print grade plus " -> A"
+  elif grade atleast 80 then
+    print grade plus " -> B"
+  elif grade atleast 70 then
+    print grade plus " -> C"
+  elif grade atleast 60 then
+    print grade plus " -> D"
+  else
+    print grade plus " -> F"
+  end
+  set j be j plus 1
+end

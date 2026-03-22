@@ -1,0 +1,125 @@
+---
+description: "Lumo programming language syntax and semantics — triggers when writing, editing, or discussing .lumo files"
+globs: "*.lumo"
+alwaysApply: false
+---
+
+# Lumo Language Rules for Cursor
+
+Lumo is an LLM-native language where EVERY operator is a plain English word. No symbols in program logic.
+
+## Syntax Mapping — Symbol to Word
+
+| Traditional | Lumo | Example |
+|------------|------|---------|
+| `+` | `plus` | `x plus y` |
+| `-` | `minus` | `x minus y` |
+| `*` | `times` | `x times y` |
+| `/` | `divby` | `x divby y` |
+| `%` | `modulo` | `x modulo y` |
+| `==` | `equals` | `x equals y` |
+| `>` | `above` | `x above y` |
+| `<` | `below` | `x below y` |
+| `>=` | `atleast` | `x atleast y` |
+| `<=` | `atmost` | `x atmost y` |
+| `&&` | `and` | `a and b` |
+| `\|\|` | `or` | `a or b` |
+| `!` | `not` | `not a` |
+| `= (assign)` | `let x be` / `set x be` | `let x be 5` / `set x be 6` |
+| `{ }` | block...`end` | `if ... then ... end` |
+| `fn/def` | `define ... taking` | `define add taking a, b` |
+| `f(x)` | `call f passing x` | `call add passing 1, 2` |
+| `arr[i]` | `get arr at i` | `get nums at 0` |
+
+## Statement Forms
+
+```lumo
+intent "purpose"                              # REQUIRED first line
+let name be expression                        # declare variable
+set name be expression                        # mutate (must let first)
+print expression                              # output
+skip                                          # no-op
+read name                                     # stdin input
+return expression                             # function return
+call name passing arg1, arg2                  # function call (statement)
+put name at index be value                    # mutate element
+```
+
+## Block Forms
+
+```lumo
+# While loop
+repeat while condition
+  statements
+end
+
+# Count loop
+repeat 10 times
+  statements
+end
+
+# For-each loop
+for each item in mylist
+  statements
+end
+
+# Conditional
+if condition then
+  statements
+elif condition then
+  statements
+else
+  statements
+end
+
+# Function
+define fname taking param1, param2
+  statements
+  return expression
+end
+
+# Pipeline
+pipe label
+  start with source
+  filter when value modulo 2 equals 0
+  map value times 2
+  yield result_var
+end
+
+# Pattern match (catch error MANDATORY)
+match expr
+  when val1 yield statement
+  when val2 yield statement
+  catch error yield statement
+end
+```
+
+## Reserved Words — NEVER use as identifiers
+
+```
+intent let be set print skip read repeat while for each in pipe match
+when catch error yield start with map filter transform end if then elif
+else define taking return call passing list at put get plus minus times
+divby modulo above below atleast atmost equals and or not true false value
+```
+
+## Critical Rules
+
+1. Programs MUST start with `intent "description"`
+2. Variables MUST be declared with `let` before mutation with `set`
+3. All blocks end with `end` — no braces, no indentation rules
+4. `match` blocks MUST end with `catch error yield <statement>`
+5. `value` is the pipe register — NEVER use as a variable name
+6. Functions have isolated scope — can read outer vars but cannot mutate them
+7. Type equality is strict — `0 equals false` is `false`
+8. `plus` with any string operand does string concatenation
+9. `divby` and `modulo` throw on zero divisor
+
+## Proof Manifest (Strict Mode)
+
+When `--strict` is used, a `.lumo.proof.json` file must accompany the source:
+```bash
+./build/lumo --generate-proof-template program.lumo > program.lumo.proof.json
+# Fill in safety proofs, then:
+./build/lumo --strict program.lumo
+```
